@@ -171,7 +171,7 @@ export async function autosaveDocJSON(doc) {
 }
 
 const JSON_TYPE = {
-  description: "Quake64 Editor",
+  description: "QuakeA8 Editor",
   accept: { "application/json": [".json"] },
 };
 

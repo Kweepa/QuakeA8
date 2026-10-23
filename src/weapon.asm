@@ -32,28 +32,12 @@ wpn_idle_x
 wpn_idle_y
 	!byte WPN_Y_AXEIDLE, WPN_Y_SHOTIDLE, WPN_Y_NAILIDLE, WPN_Y_FLUSH
 
-wpn_body_lo
-	!byte <spr_axe_0, <spr_shot2, <spr_nail_0, <spr_rock
-wpn_body_hi
-	!byte >spr_axe_0, >spr_shot2, >spr_nail_0, >spr_rock
+wpn_fr		!byte 0
 
-wpn_flash4_lo
-	!byte <spr_spark, <spr_muzzle, <spr_nail_fl, <spr_muzzle
-wpn_flash4_hi
-	!byte >spr_spark, >spr_muzzle, >spr_nail_fl, >spr_muzzle
-
-wpn_flash_x4
-	!byte FLASH_X_C, FLASH_X_C, FLASH_X_NL, FLASH_X_C
-wpn_flash_x5
-	!byte FLASH_X_C, FLASH_X_C, FLASH_X_NR, FLASH_X_C
 ; added to wpn_y (signed)
 wpn_flashdy
 	!byte -FLASH_DY, -FLASH_DY_GUN, FLASH_DY_NAIL, -FLASH_DY_GUN
 
-nail_fr_lo
-	!byte <spr_nail_1, <spr_nail_2
-nail_fr_hi
-	!byte >spr_nail_1, >spr_nail_2
 nail_flash_en
 	!byte FLASH_EN_L, FLASH_EN_R	; sprite 4 left, sprite 5 right
 
@@ -96,7 +80,7 @@ ws_xmsb_hi
 ws_snd
 	!byte SOUND_WEAPONS_GRENADE, 0
 ws_colsrc
-	!byte 0, 1			; 0 = copy col_fx, 1 = leave splat_col
+	!byte 0, 1			; 0 = set COL_FX, 1 = leave splat_col
 
 fxh_lo
 	!byte <fxh_flash4, <fxh_flash5, <fxh_emuz, <fxh_splat, <fxh_explode
@@ -133,7 +117,7 @@ recoil_step_ms_hi
 ; VIC sprite slots / flash state. Does not touch HP, ammo, or weapons.
 init_weapon_hw
 	lda #0
-	sta $d015
+
 	sta spr_en
 	sta wpn_flash_en
 	ldx #0
@@ -180,28 +164,8 @@ init_weapon_hw
 	dex
 	bpl -
 
-	lda #0
-	sta $d01d
-	sta $d017
-	sta $d01c
-	sta $d010
-	sta $d01b
 
-	ldx #0
-	lda #WPN_PTR0
-.iw_ptr
-	sta $c3f8,x
-	sta $c7f8,x
-	clc
-	adc #1
-	inx
-	cpx #8				; body 0–3, flash 4–5, emuz 6, splat 7
-	bcc .iw_ptr
-
-	; nail R bitmap stays in WPN_FLASH2
-	lda #<spr_nail_fr
-	ldy #>spr_nail_fr
-	jmp blit_flash2
+	rts
 
 ; First start: hardware + starting inventory.
 init_weapon
@@ -231,8 +195,6 @@ reset_loadout
 	sta pu_ms_l
 	sta pu_ms_h
 
-	lda #COL_WPN
-	sta col_wpn
 	lda #COL_FLASH_Y
 	sta flash4_col
 	sta flash5_col
@@ -270,22 +232,9 @@ switch_weapon
 	jmp setup_weapon
 
 setup_weapon
+	lda #0
+	sta wpn_fr
 	ldx cur_weapon
-	lda wpn_body_lo,x
-	ldy wpn_body_hi,x
-	jsr blit_n
-	ldx cur_weapon
-	lda wpn_flash4_lo,x
-	ldy wpn_flash4_hi,x
-	jsr blit_flash
-	ldx cur_weapon
-	cpx #WPN_NAIL
-	bne .su_dx
-	lda #<spr_nail_fr
-	ldy #>spr_nail_fr
-	jsr blit_flash2
-	ldx cur_weapon
-.su_dx
 	lda wpn_flashdy,x
 	sta wpn_flash_dy
 	lda #COL_FLASH_Y
@@ -297,188 +246,18 @@ setup_weapon
 	sta wpn_y
 	rts
 
-; A = src lo, Y = src hi → WPN_RAM, wpn_body_n[cur_weapon] bytes (0 = 256)
-blit_n
-	sta .bn + 1
-	sty .bn + 2
-	ldx cur_weapon
-	lda wpn_body_n,x
-	sta .bnlim + 1
-	ldx #0
-.bn
-	lda $ffff,x
-	sta WPN_RAM,x
-	inx
-.bnlim
-	cpx #0
-	bne .bn
+; A = src lo, Y = src hi. Both keep the mode-E pointer (no unpack).
+blit_world
+	ldx ws_slot
+	beq .bw_emuz
+	sta splat_src
+	sty splat_src+1
+	rts
+.bw_emuz
+	sta emuz_src
+	sty emuz_src+1
 	rts
 
-; A = src lo, Y = src hi → unpack zeromask into dest (set by wrappers).
-; Packed: 8-byte mask at src+0, nonzero payload at src+8. Y indexes mask only.
-unpack_fx
-	sta .us + 1
-	clc
-	adc #8
-	sta .us2 + 1
-	tya
-	sta .us + 2
-	adc #0
-	sta .us2 + 2
-	lda #0
-	tax
-.uclr
-.ud0
-	sta $ffff,x
-	inx
-	cpx #64
-	bne .uclr
-	ldy #0
-	ldx #0
-.umask
-.us	lda $ffff,y
-	iny
-	sta wpn_tmp0
-	lda #8
-.ubit
-	lsr wpn_tmp0
-	bcc .uz
-	pha
-.us2	lda $ffff
-	inc .us2 + 1
-	bne .ud1
-	inc .us2 + 2
-.ud1	sta $ffff,x
-	pla
-.uz
-	inx
-	sec
-	sbc #1
-	bne .ubit
-	cpx #64
-	bcc .umask
-	rts
-
-set_unpack_dst
-	sta .ud0 + 1
-	sta .ud1 + 1
-	sty .ud0 + 2
-	sty .ud1 + 2
-	rts
-
-; A = src lo, Y = src hi → WPN_FLASH (64, zeromask)
-blit_flash
-	pha
-	tya
-	pha
-	lda #<WPN_FLASH
-	ldy #>WPN_FLASH
-	jsr set_unpack_dst
-	pla
-	tay
-	pla
-	jmp unpack_fx
-
-blit_flash2
-	pha
-	tya
-	pha
-	lda #<WPN_FLASH2
-	ldy #>WPN_FLASH2
-	jsr set_unpack_dst
-	pla
-	tay
-	pla
-	jmp unpack_fx
-
-wpn_slot_base
-	!byte 0, 4, 8, 12
-
-; IRQ (I/O on): weapon/muzzle/splat XY, $d015, $d010.
-apply_xy
-	lda #0
-	sta $d010
-	ldy #0				; slot 0..3
-.axy_slot
-	ldx cur_weapon
-	tya
-	clc
-	adc wpn_slot_base,x
-	tax				; dx/dy index
-	lda wpn_x
-	clc
-	adc wpn_dx,x
-	pha
-	lda wpn_y
-	clc
-	adc wpn_dy,x
-	pha				; Y
-	tya
-	asl
-	tax				; VIC pair (sprites 0–3)
-	pla
-	sta $d001,x
-	pla
-	sta $d000,x
-	iny
-	cpy #4
-	bcc .axy_slot
-	lda cur_weapon
-	bne .axy_fl
-	lda flash_phase
-	bne apply_en			; axe spark keeps spawn Y through red
-.axy_fl
-	jsr place_flash
-apply_en
-	ldx cur_weapon
-	lda wpn_body_en,x
-	ldx flash_phase
-	beq .ae4
-	ora #FLASH_EN_L
-.ae4
-	ldx flash5_phase
-	beq .ae5
-	ora #FLASH_EN_R
-.ae5
-	ldx emuz_on
-	beq .ae6
-	ora #EMUZ_MSB
-.ae6
-	ldx splat_on
-	beq .ae7
-	ora #SPLAT_MSB
-.ae7
-	sta wpn_flash_en
-	sta spr_en
-	sta $d015
-	lda #WPN_PTR_EMUZ
-	sta $c3fe
-	sta $c7fe
-	lda #WPN_PTR_SPLAT
-	sta $c3ff
-	sta $c7ff
-	jsr place_enemy_muzzle
-	jsr place_splat
-	lda emuz_xmsb
-	ora splat_xmsb
-	sta $d010
-	rts
-
-; Flash X is screen-absolute; Y tracks the weapon.
-place_flash
-	ldx cur_weapon
-	lda wpn_flash_x4,x
-	sta $d008
-	lda wpn_flash_x5,x
-	sta $d00a
-	lda wpn_y
-	clc
-	adc wpn_flash_dy
-	sta $d009
-	sta $d00b
-	rts
-
-; A = FLASH_EN_L sprite 4, FLASH_EN_R sprite 5. Other side's fade is left running.
 start_flash
 	cmp #FLASH_EN_R
 	beq .sf5
@@ -624,9 +403,8 @@ fire_shot
 	lda #POSE_FIRE
 	sta wpn_pose
 	ldx mg_frame
-	lda nail_fr_lo,x
-	ldy nail_fr_hi,x
-	jsr blit_n
+	inx
+	stx wpn_fr
 	ldx mg_frame
 	lda nail_flash_en,x
 	jsr start_flash
@@ -637,7 +415,7 @@ fire_shot
 
 ; X = cur_weapon; C=1 spent (or free), C=0 cannot fire
 try_spend_ammo
-!if INF_AMMO = 1 {
+!if  INF_AMMO = 1 {
 	sec
 	rts
 }
@@ -677,10 +455,8 @@ nail_idle
 	lda #0
 	sta mg_frame
 	ldx #WPN_NAIL
-	lda wpn_body_lo,x
-	ldy wpn_body_hi,x
-	jsr blit_n
-	ldx #WPN_NAIL
+	lda #0
+	sta wpn_fr
 	lda wpn_idle_x,x
 	sta wpn_x
 	lda wpn_idle_y,x
@@ -748,10 +524,8 @@ wpn_to_idle
 	sta wpn_y
 	cpx #WPN_NAIL
 	bne .ti_xy
-	lda wpn_body_lo,x
-	ldy wpn_body_hi,x
-	jsr blit_n
-	ldx cur_weapon
+	lda #0
+	sta wpn_fr
 .ti_xy
 	rts
 
@@ -909,26 +683,6 @@ splat_expired
 	sta (fx_ptr),y
 }
 
-; A = src lo, Y = src hi. Dest from ws_slot (WPN_EMUZ / WPN_SPLAT).
-blit_world
-	pha
-	tya
-	pha
-	ldx ws_slot
-	beq .bw_emuz
-	lda #<WPN_SPLAT
-	ldy #>WPN_SPLAT
-	jmp .bw_dst
-.bw_emuz
-	lda #<WPN_EMUZ
-	ldy #>WPN_EMUZ
-.bw_dst
-	jsr set_unpack_dst
-	pla
-	tay
-	pla
-	jmp unpack_fx
-
 ; A = tip viewport sx, Y = tip viewport sy. Depth = rot1 (CAM_ZH of tip vert).
 start_enemy_muzzle
 	pha
@@ -995,7 +749,7 @@ start_world_spr
 	+ws_sta ws_vx_lo, ws_vx_hi
 	lda ws_colsrc,x
 	bne .sws_nocol
-	lda col_fx
+	lda #COL_FX
 	+ws_sta ws_col_lo, ws_col_hi
 .sws_nocol
 	lda ws_snd,x
@@ -1027,31 +781,6 @@ start_world_spr
 	lda ws_ms_h,x
 	iny
 	sta (fx_ptr),y
-	rts
-
-; Write staged enemy-muzzle VIC regs (IRQ, I/O on). Abs only — no ZP.
-place_enemy_muzzle
-	lda emuz_on
-	beq .pem_rts
-	lda emuz_vx
-	sta $d00c
-	lda emuz_vy
-	sta $d00d
-	lda emuz_col
-	sta $d02d
-.pem_rts
-	rts
-
-place_splat
-	lda splat_on
-	beq .psp_rts
-	lda splat_vx
-	sta $d00e
-	lda splat_vy
-	sta $d00f
-	lda splat_col
-	sta $d02e
-.psp_rts
 	rts
 
 tick_anim

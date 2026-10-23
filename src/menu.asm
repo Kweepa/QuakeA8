@@ -1,17 +1,13 @@
-; Quake64 MENU overlay — load @ LOCODE_BASE ($0900), JSR from boot, then overwritten by GAME.
-; Entry: +0 run_menu, +3 copy_tab. Hires bitmap UI + proportional Quake font.
+; Menu overlay — load @ LOCODE_BASE ($0900), JSR from a8boot, then overwritten by GAME.
 ; difficulty → $08FF; effects_vol/game_complete → $08FD/$08FE (survive GAME overwrite).
-; rb_calibrate (rbcal.asm) → rb_n $08F5-$08F6: mid-split delay for the game's IRQ.
-; Menu music: MUS1..3 loaded from disk to $9000 (random at entry, Jukebox
-; switches), all 3 SID voices, CIA1 Timer A tick. No interface sounds.
-; Assembled per disk: -DUSE_KRILL=1 uses loadraw, default uses KERNAL LOAD.
+; Music is the embedded POKEY tune (a8music.asm).
 !cpu 6502
 !to "menu.prg", cbm
 
 MENU_HELP_ENDINGS = 0			; 1 = Read This! shows ending1/2 (spacing)
-MENU_WIP_SPR	= 0			; 1 = bouncing WIP watermark on sprite 0
 
 !source "mem.asm"
+!source "build_flags.asm"
 
 MENU_SLOTS	= 8
 BOX_PAD		= 2
@@ -26,24 +22,6 @@ BRAND_KEEP_ROWS	= 6			; rows 0..5 fixed (bar + title); skip on repaint
 HINT_ROW	= 23
 HINT_COL	= 0			; help text column (ink is TEXT_COL)
 HINT_GAP	= 8			; px between key sprite and label
-HINT_SPR_Y	= 228			; 21px sprite centered on row 23
-MUX_LOGO_RASTER	= 30
-MUX_HINT_RASTER	= 90
-; 5+6+24 sprites × 64 just under SCREEN ($5C00); WIP one slot below
-WIP_SPR_RAM	= $5300
-WIP_SPR_PTR0	= (WIP_SPR_RAM - VIC_BANK1) / 64
-WIP_COL		= 1			; white
-WIP_X_MIN	= 24
-WIP_X_MAX	= 320
-WIP_Y_MIN	= 50
-WIP_Y_MAX	= 229
-WIP_SPR_EN_BIT	= %00000001		; sprite 0 (frontmost)
-LOGO_SPR_RAM	= $5340
-LOGO_SPR_PTR0	= (LOGO_SPR_RAM - VIC_BANK1) / 64
-HINT_SPR_RAM	= LOGO_SPR_RAM + TITLE_SPR_COUNT * 64
-HINT_SPR_PTR0	= (HINT_SPR_RAM - VIC_BANK1) / 64
-CURSOR_SPR_RAM	= HINT_SPR_RAM + HINT_SPR_COUNT * 64
-CURSOR_SPR_PTR0	= (CURSOR_SPR_RAM - VIC_BANK1) / 64
 
 TEXT_COL	= 7			; yellow options
 HILITE_COL	= 1			; white selected
@@ -52,6 +30,8 @@ MENU_BORDER	= 0			; black
 COL_MAIN	= 0			; black surround
 COL_BAR		= 0			; black title strip
 COL_BOX		= 9			; brown option box
+HINT_BG		= 8			; orange bottom bar (old menu surround)
+COL_PANEL_INK_A8 = 7			; mode 2 ink is PF1 luminance on the paper hue: lum C on brown = orange
 COL_TITLE_INK	= 11			; dark grey QUAKE letters in the bar
 HINT_KEY_COL	= 11			; dark grey key glyphs
 STORY_BG	= 0			; black around story panel
@@ -99,112 +79,12 @@ aux_h		= $fe
 
 *= LOCODE_BASE
 	jmp run_menu
-	jmp copy_tab
-
-copy_tab
-	sei
-	lda #BANK_RAM
-	sta $01
-	lda #$ff
-	ldx #7
--
-	sta CH_A_TOP + 24 * 64,x
-	sta CH_A_BOT + 24 * 64,x
-	sta CH_B_TOP + 24 * 64,x
-	sta CH_B_BOT + 24 * 64,x
-	dex
-	bpl -
-
-	lda #<TAB_ALOG
-	sta ptr_l
-	lda #>TAB_ALOG
-	sta ptr_h
-	lda #<ALOGTAB
-	sta aux_l
-	lda #>ALOGTAB
-	sta aux_h
-	jsr copy_tab_page
-	lda #<ALOGHI
-	sta aux_l
-	lda #>ALOGHI
-	sta aux_h
-	jsr copy_tab_page
-
-	lda #<TAB_LOG
-	sta ptr_l
-	lda #>TAB_LOG
-	sta ptr_h
-	lda #<LOGTAB
-	sta aux_l
-	lda #>LOGTAB
-	sta aux_h
-	jsr copy_tab_page
-
-	lda #<TAB_SIN
-	sta ptr_l
-	lda #>TAB_SIN
-	sta ptr_h
-	lda #<SINTAB
-	sta aux_l
-	lda #>SINTAB
-	sta aux_h
-	jsr copy_tab_page
-	ldy #0
--
-	lda (ptr_l),y
-	sta (aux_l),y
-	iny
-	cpy #64
-	bne -
-
-	lda #<TAB_INVZL
-	sta ptr_l
-	lda #>TAB_INVZL
-	sta ptr_h
-	lda #<invzl
-	sta aux_l
-	lda #>invzl
-	sta aux_h
-	jsr copy_tab_128
-	lda #<TAB_INVZH
-	sta ptr_l
-	lda #>TAB_INVZH
-	sta ptr_h
-	lda #<invzh
-	sta aux_l
-	lda #>invzh
-	sta aux_h
-	jsr copy_tab_128
-
-	lda #BANK_IO
-	sta $01
-	cli
-	rts
-
-copy_tab_page
-	ldy #0
--
-	lda (ptr_l),y
-	sta (aux_l),y
-	iny
-	bne -
-	inc ptr_h
-	inc aux_h
-	rts
-
-copy_tab_128
-	ldy #0
--
-	lda (ptr_l),y
-	sta (aux_l),y
-	iny
-	bpl -
-	rts
 
 run_menu
-	jsr music_pick_load			; before SEI: KERNAL/Krill load, splash still up
+
 	sei
-	jsr rb_calibrate			; CPU:VIC ratio → rb_n ($08F5-6) for the game's mid split
+
+	jsr set_video_ms
 	jsr init_font_tabs
 	jsr init_menu_vic
 	lda #0
@@ -218,13 +98,11 @@ run_menu
 	sta cursor_tick
 	sta menu_mux_phase
 	sta menu_raster_en
-	lda #15
-	sta effects_vol
+
 	jsr copy_menu_sprites
-!if MENU_WIP_SPR {
-	jsr setup_wip_spr
-}
+!if  JUKEBOX {
 	jsr sync_juke_title
+}
 	jsr menu_sfx_init
 	jsr detect_mouse
 	jsr clear_screen_all
@@ -279,15 +157,8 @@ run_menu
 	jmp .rm_loop
 .rm_done
 	jsr menu_sfx_done
-	lda $d011
-	and #%11101111				; DEN off through boot asset loads
-	sta $d011
-	lda #0
-	sta $d015
-	sta $d020
-	sta $d021
-	rts
 
+	jmp a8_menu_exit
 menu_move_up
 	lda menu_item
 	sta menu_prev
@@ -314,12 +185,19 @@ menu_move_down
 
 ; Repaint only old + new rows (no clear / full redraw)
 update_selection
+
+	jsr a8_cursor_erase
+
 	ldx menu_prev
 	stx tmp4
 	jsr draw_menu_item
 	ldx menu_item
 	stx tmp4
-	jmp draw_menu_item
+	jsr draw_menu_item
+
+	jsr a8_stamp_cursor
+
+	rts
 
 menu_esc
 	lda menu_stack_d
@@ -363,14 +241,12 @@ vol_fx_inc
 	lda effects_vol
 	and #15
 	sta effects_vol
-	sta $d418
 	jmp sync_redraw
 vol_fx_dec
 	dec effects_vol
 	lda effects_vol
 	and #15
 	sta effects_vol
-	sta $d418
 sync_redraw
 	jsr sync_vol_strings
 	jsr sync_mouse_string
@@ -378,32 +254,7 @@ sync_redraw
 	stx tmp4
 	jmp draw_menu_item
 
-; 1351 Port 1: pots not stuck at $00/$FF
 detect_mouse
-	lda #0
-	sta mouse_en
-	ldx #8
-.dm_samp
-	ldy #0
-.dm_wait
-	dey
-	bne .dm_wait
-	lda $d419
-	beq .dm_y
-	cmp #$ff
-	beq .dm_y
-.dm_yes
-	lda #1
-	sta mouse_en
-	rts
-.dm_y
-	lda $d41a
-	beq .dm_next
-	cmp #$ff
-	bne .dm_yes
-.dm_next
-	dex
-	bne .dm_samp
 	rts
 
 mouse_toggle
@@ -418,13 +269,13 @@ sync_mouse_string
 	bne .sms_on
 .sms_off
 	lda str_moff,x
-	sta str_mouse + 15,x
+	sta str_mouse_bit,x
 	dex
 	bpl .sms_off
 	rts
 .sms_on
 	lda str_mon,x
-	sta str_mouse + 15,x
+	sta str_mouse_bit,x
 	dex
 	bpl .sms_on
 	rts
@@ -495,9 +346,10 @@ menu_select
 	lda menu_item
 	sta difficulty
 	jsr menu_raster_off
-	lda $d011
-	and #%11101111				; DEN off — no leftover logo sprites
-	sta $d011
+
+	lda #0
+	sta $d400				; DMA off through the pause
+
 	jsr clear_screen_all
 	ldx #20
 	jsr wait_frames_x
@@ -569,10 +421,12 @@ menu_select
 	beq .ms_juke
 	jmp .ms_st
 .ms_juke
+!if  JUKEBOX {
 	lda menu_item
 	cmp music_track
 	beq .ms_st				; already playing
 	jsr jukebox_select			; ends in draw_menu; carry must be clear
+}
 	jmp .ms_st
 .ms_ord
 	lda #<order_text
@@ -585,7 +439,7 @@ menu_select
 	jsr show_text_screen
 	jmp .ms_ret
 .ms_hlp
-!if MENU_HELP_ENDINGS {
+!if  MENU_HELP_ENDINGS {
 	jsr show_ending_pages
 } else {
 	ldx #0
@@ -623,31 +477,21 @@ menu_select
 
 ; Warm-start BASIC → READY.
 quit_to_basic
-	jsr menu_sfx_done
-	sei
-	lda #$37
-	sta $01
-	ldx #$ff
-	txs
-	jsr $ff8a				; RESTOR
-	jsr $ff84				; IOINIT
-	jsr $ff81				; CINT (default VIC/charset)
-	lda #0
-	sta $c6					; clear keyboard buffer (NDX)
-	cli
-	jmp ($a002)				; BASIC warm start
 
-; Root→eps/options/ctrl/help/credits/jukebox/quit; E1→skill; E2-4→order; skill→start;
-; options stay/back; jukebox tracks→NM_JUKE (item = track)
+	jmp a8_quit
 next_menu
+!if  JUKEBOX {
 	!byte 1, 3, NM_CTRL, NM_HELP, NM_CREDITS, 4, NM_QUIT, 0
+} else {
+	!byte 1, 3, NM_CTRL, NM_HELP, NM_CREDITS, NM_QUIT, 0, 0
+}
 	!byte 2, NM_ORDER, NM_ORDER, NM_ORDER, NM_BACK, 0, 0, 0
 	!byte NM_START, NM_START, NM_START, NM_BACK, 0, 0, 0, 0
 	!byte 3, 3, NM_BACK, 0, 0, 0, 0, 0
 	!byte NM_JUKE, NM_JUKE, NM_JUKE, NM_BACK, 0, 0, 0, 0
 
 menu_sizes
-	!byte 7, 5, 4, 3, 4
+	!byte 7 - (1 - JUKEBOX), 5, 4, 3, 4
 
 ; --- drawing ---------------------------------------------------------------
 draw_menu
@@ -676,9 +520,14 @@ draw_menu
 	bcc .dm_l
 
 	jsr draw_hint
+!if  JUKEBOX {
 	jsr draw_track_credit
+}
 	lda #1
 	sta cursor_spr_en
+
+	jsr a8_stamp_cursor
+
 	jmp menu_unblank
 
 ; Jukebox only: "Tracks by Mandy Kane" one blank row under the option box.
@@ -729,107 +578,8 @@ draw_section_title
 
 ; Key sprites + "move / adjust / select" on HINT_ROW.
 draw_hint
-	lda #COL_MAIN
-	sta cell_bg
-	lda #TEXT_COL
-	sta ui_text_col
 
-	lda #<str_hint_move
-	ldy #>str_hint_move
-	sta ui_str_l
-	sty ui_str_h
-	jsr str_pix_len
-	lda pr_len
-	sta hint_w0
-
-	lda #<str_hint_adjust
-	ldy #>str_hint_adjust
-	sta ui_str_l
-	sty ui_str_h
-	jsr str_pix_len
-	lda pr_len
-	sta hint_w1
-
-	lda #<str_hint_select
-	ldy #>str_hint_select
-	sta ui_str_l
-	sty ui_str_h
-	jsr str_pix_len
-	lda pr_len
-	sta hint_w2
-
-	; total = 3*24 + 5*HINT_GAP + w0+w1+w2
-	lda #HINT_SPR_W * 3 + HINT_GAP * 5
-	clc
-	adc hint_w0
-	adc hint_w1
-	adc hint_w2
-	sta tmp0
-	lda #<320
-	sec
-	sbc tmp0
-	lsr
-	sta tmp1				; bitmap start x
-
-	clc
-	adc #24				; VIC sprite X origin
-	sta hint_spr_x
-
-	lda tmp1
-	clc
-	adc #HINT_SPR_W
-	adc #HINT_GAP
-	sta hint_tx				; "move" pixel x
-
-	clc
-	adc hint_w0
-	adc #HINT_GAP
-	sta tmp3				; AD bitmap x
-	clc
-	adc #24
-	sta hint_spr_x + 1
-
-	lda tmp3
-	clc
-	adc #HINT_SPR_W
-	adc #HINT_GAP
-	sta hint_tx + 1				; "adjust" pixel x
-
-	clc
-	adc hint_w1
-	adc #HINT_GAP
-	sta tmp3				; RETURN bitmap x
-	clc
-	adc #24
-	sta hint_spr_x + 2
-
-	lda tmp3
-	clc
-	adc #HINT_SPR_W
-	adc #HINT_GAP
-	sta hint_tx + 2				; "select" pixel x
-
-	lda hint_tx
-	sta hint_px
-	lda #<str_hint_move
-	ldy #>str_hint_move
-	jsr hint_print_px
-	lda hint_tx + 1
-	sta hint_px
-	lda #<str_hint_adjust
-	ldy #>str_hint_adjust
-	jsr hint_print_px
-	lda hint_tx + 2
-	sta hint_px
-	lda #<str_hint_select
-	ldy #>str_hint_select
-	jsr hint_print_px
-
-	lda #1
-	sta hint_spr_en
-	rts
-
-; A/Y = string, hint_px = pixel x, HINT_ROW.
+	jmp a8_draw_hint
 hint_print_px
 	sta ui_str_l
 	sty ui_str_h
@@ -968,7 +718,17 @@ draw_menu_item
 .di_h
 	lda #HILITE_COL
 	sta ui_text_col
-	; Spinning Q sprites: X = 24 + (box_left+BOX_PAD)*8, Y = 45+row*8
+	; Spinning Q: column is box_left+BOX_PAD. VIC X = 24 + col*8.
+	lda box_left
+	clc
+	adc #BOX_PAD
+
+	sec
+	sbc #1					; monospace label: leave one blank cell
+
+	sta cursor_col
+	lda pr_row
+	sta cursor_row
 	lda box_left
 	clc
 	adc #BOX_PAD
@@ -1013,7 +773,9 @@ show_text_screen
 	sta clear_bg
 	lda #COL_BOX
 	sta cell_bg
-	lda #HILITE_COL
+
+	lda #COL_PANEL_INK_A8
+
 	sta ui_text_col
 	lda #1
 	sta pr_setcol
@@ -1040,13 +802,15 @@ show_story_screen
 	sty txt_ptr_h
 	lda #STORY_BG
 	sta clear_bg
-	sta $d021
-	lda #STORY_BOX
+
+
+	lda #1					; white panel
 	sta cell_bg
-	lda #STORY_TEXT
+	lda #0					; black text
 	sta ui_text_col
 	lda #0
-	sta pr_setcol				; panel already black-on-ltgrey
+	sta pr_setcol
+
 	jsr .sts_body
 	lda #1
 	sta pr_setcol
@@ -1071,9 +835,9 @@ show_story_screen
 	adc #BOX_VGAP
 	adc tmp4
 	tax
+
 	lda box_left
-	clc
-	adc #BOX_PAD
+
 	jsr print_marked
 	jsr str_skip
 	ldx tmp4
@@ -1131,6 +895,16 @@ calc_text_box
 	ror pix_max_l
 	lsr
 	ror pix_max_l
+
+	lda #40
+	sec
+	sbc pix_max_l
+	lsr
+	sta box_left			; 38 chars → column 1, one spare each side
+	lda pix_max_l
+	sta box_width
+	jmp .ct_vert
+
 	lda pix_max_l
 	clc
 	adc #BOX_PAD
@@ -1142,6 +916,7 @@ calc_text_box
 	sbc box_width
 	lsr
 	sta box_left
+.ct_vert
 	lda menu_size
 	clc
 	adc #BOX_VGAP
@@ -1173,17 +948,20 @@ apply_story_layout
 	bne .asl_rts
 	ldx #0
 	lda #COL_MAIN
-.asl_r6
-	sta SCREEN + BRAND_KEEP_ROWS * 40,x
-	inx
-	cpx #40
-	bne .asl_r6
+
+	lda #BRAND_KEEP_ROWS
+	sta pr_row
+	lda #COL_MAIN
+	jsr a8_note_col
+
 	lda menu_size
 	clc
 	adc #BOX_VGAP
 	adc #BOX_VGAP
 	sta tmp5				; box height
-	lda #25
+
+	lda #24
+
 	sec
 	sbc #STORY_GREY_TOP
 	sec
@@ -1202,110 +980,14 @@ apply_story_layout
 
 ; --- hires bitmap (proportional Quake font) --------------------------------
 init_menu_vic
-	lda #$35				; I/O in, KERNAL out (menu_sfx IRQ uses $fffe)
-	sta $01
-	lda #%00000010			; VIC bank 1 ($4000-$7FFF), upper 6 bits 0
-	sta $dd00			; absolute write — see vic.asm init_vic
-	lda $d011
-	and #%10000111			; clear ECM/BMM/DEN/RSEL
-	ora #%00101011			; hires bitmap + 25 rows, DEN off until first draw
-	sta $d011
-	lda $d016
-	and #%11100111			; hires (not MCM), 40 cols
-	ora #%00001000
-	sta $d016
-	lda #%01111000			; matrix $5C00, bitmap $6000
-	sta $d018
-	lda #0
-	sta $d015
-	sta $d01b				; sprites in front of bitmap
-	sta $d017
-	sta $d01d
-	sta $d021
-	sta $d01a				; no leftover VIC IRQs
-	lda #MENU_BORDER
-	sta $d020
-	rts
 
-; Clear rows BRAND_KEEP_ROWS..24 only — top bar stays put.
+	jmp a8_init_vic
 clear_screen
-	lda #<BITMAP + BRAND_KEEP_ROWS * 320
-	sta ptr_l
-	lda #>BITMAP + BRAND_KEEP_ROWS * 320
-	sta ptr_h
-	ldy #0
-	lda #>(BITMAP + $2000)
-	sta tmp5
-	lda #0
-.cs_p
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	bne .cs_p
-	inc ptr_h
-	lda ptr_h
-	cmp tmp5
-	bcs .cs_col
-	lda #0
-	beq .cs_p
-.cs_col
-	; colour matrix from row 6: 760 bytes (do not touch sprite ptrs @ SCREEN+$3f8)
-	ldx #0
-	lda clear_bg
-.cs_c
-	sta SCREEN + BRAND_KEEP_ROWS * 40,x
-	sta SCREEN + BRAND_KEEP_ROWS * 40 + $100,x
-	inx
-	bne .cs_c
-	ldx #0
-.cs_c2
-	sta SCREEN + BRAND_KEEP_ROWS * 40 + $200,x
-	inx
-	cpx #248				; 240+512+248 = 1000
-	bne .cs_c2
-	rts
 
-; Full bitmap + matrix clear (menu entry / exit).
+	jmp a8_clear_screen
 clear_screen_all
-	lda #<BITMAP
-	sta ptr_l
-	lda #>BITMAP
-	sta ptr_h
-	lda #0
-	tax
-	tay
-.csa_p
-	sta (ptr_l),y
-	iny
-	bne .csa_p
-	inc ptr_h
-	inx
-	cpx #32
-	bcc .csa_p
-	ldx #0
-	lda #COL_MAIN
-.csa_c
-	sta SCREEN,x
-	sta SCREEN+$100,x
-	sta SCREEN+$200,x
-	sta SCREEN+$2e8,x
-	inx
-	bne .csa_c
-	rts
 
+	jmp a8_clear_all
 fill_top_bar
 	ldx #BAR_TOP
 .ftb_r
@@ -1317,7 +999,9 @@ fill_top_bar
 .ftb_c
 	jsr bmp_blank_cell_y
 	lda #COL_BAR
-	sta (aux_l),y
+
+	jsr a8_note_col
+
 	dey
 	bpl .ftb_c
 	ldx tmp4
@@ -1328,298 +1012,15 @@ fill_top_bar
 
 ; Dark-grey QUAKE into the black bar (white highlights are sprites).
 blit_menu_title
-	lda #<menu_title_data
-	sta .bld + 1
-	lda #>menu_title_data
-	sta .bld + 2
-	ldx #0
-.blr
-	stx tmp4
-	txa
-	clc
-	adc #BAR_TOP
-	tax
-	lda #MENU_TITLE_LEFT
-	jsr bmp_cell_addr
-	ldx #0
-.blc
-	stx tmp5
-	txa
-	asl
-	asl
-	asl
-	tay
-	ldx #0
-.blb
-.bld	lda $ffff,x
-	sta (ptr_l),y
-	iny
-	inx
-	cpx #8
-	bne .blb
-	lda .bld + 1
-	clc
-	adc #8
-	sta .bld + 1
-	bcc .bln
-	inc .bld + 2
-.bln
-	lda #COL_TITLE_INK
-	asl
-	asl
-	asl
-	asl
-	ora #COL_BAR
-	ldy tmp5
-	sta (aux_l),y
-	ldx tmp5
-	inx
-	cpx #MENU_TITLE_COLS
-	bcc .blc
-	ldx tmp4
-	inx
-	cpx #MENU_TITLE_ROWS
-	bcc .blr
-	rts
 
-; Black bar + dark-grey QUAKE bitmap + 5 white highlight sprites
+	jmp a8_blit_title
 draw_brand
 	jsr fill_top_bar
 	jmp blit_menu_title
 
 copy_menu_sprites
-	ldx #0
-.cms0
-	lda menu_title_spr,x
-	sta LOGO_SPR_RAM,x
-	inx
-	bne .cms0
-	ldx #0
-.cms1
-	lda menu_title_spr + $100,x
-	sta LOGO_SPR_RAM + $100,x
-	inx
-	cpx #$40
-	bne .cms1
-	ldx #0
-.cms2
-	lda menu_hint_spr,x
-	sta HINT_SPR_RAM,x
-	inx
-	bne .cms2
-	ldx #0
-.cms3
-	lda menu_hint_spr + $100,x
-	sta HINT_SPR_RAM + $100,x
-	inx
-	cpx #$80
-	bne .cms3
-	ldx #0
-.cms4
-	lda menu_cursor_spr,x
-	sta CURSOR_SPR_RAM,x
-	lda menu_cursor_spr + $100,x
-	sta CURSOR_SPR_RAM + $100,x
-	lda menu_cursor_spr + $200,x
-	sta CURSOR_SPR_RAM + $200,x
-	lda menu_cursor_spr + $300,x
-	sta CURSOR_SPR_RAM + $300,x
-	lda menu_cursor_spr + $400,x
-	sta CURSOR_SPR_RAM + $400,x
-	lda menu_cursor_spr + $500,x
-	sta CURSOR_SPR_RAM + $500,x
-	inx
-	bne .cms4
-!if MENU_WIP_SPR {
-	ldx #0
-.cms_w
-	lda menu_wip_spr,x
-	sta WIP_SPR_RAM,x
-	inx
-	cpx #(WIP_SPR_COUNT * 64)
-	bne .cms_w
-}
-	rts
 
-!if MENU_WIP_SPR {
-; Sprite 0: WIP watermark. Mux never touches ptr/X/Y/colour.
-setup_wip_spr
-	lda #WIP_SPR_PTR0
-	sta SCREEN + $3f8
-	lda #WIP_COL
-	sta $d027
-	lda #40
-	sta wip_x
-	lda #70
-	sta wip_y
-	lda #0
-	sta wip_spr_xmsb
-	lda #1
-	sta wip_dx
-	sta wip_dy
-	lda #WIP_SPR_EN_BIT
-	sta wip_spr_en
-	lda wip_x
-	sta $d000
-	lda wip_y
-	sta $d001
-	lda #0
-	sta mux_msb
-	lda wip_spr_xmsb
-	sta $d010
-	rts
-}
-
-; Raster IRQ A — white QUAKE highlights on sprites 1–5 (WIP stays 0).
-mux_logo_spr
-	ldx #0
-	lda #LOGO_SPR_PTR0
-.mlp
-	sta SCREEN + $3f9,x
-	clc
-	adc #1
-	inx
-	cpx #TITLE_SPR_COUNT
-	bne .mlp
-	lda #HILITE_COL
-	ldx #0
-.mlcol
-	sta $d028,x
-	inx
-	cpx #TITLE_SPR_COUNT
-	bne .mlcol
-	ldx #0
-	ldy #2
-.mlx
-	lda title_spr_x,x
-	sta $d000,y
-	iny
-	iny
-	inx
-	cpx #TITLE_SPR_COUNT
-	bne .mlx
-	lda #50 + BAR_TOP * 8 + MENU_TITLE_PAD_Y
-	ldx #0
-	ldy #3
-.mly
-	sta $d000,y
-	iny
-	iny
-	inx
-	cpx #TITLE_SPR_COUNT
-	bne .mly
-	lda #%00011111
-	asl					; sprites 1–5
-	ora wip_spr_en
-	sta $d015
-	lda title_spr_xmsb
-	asl					; sprite 4 → 5
-	sta mux_msb				; main thread must keep this bit
-	ora wip_spr_xmsb
-	sta $d010
-	rts
-
-; Raster IRQ mid — spinning Q on sprites 1–4 (WIP stays 0).
-mux_cursor_spr
-	lda cursor_spr_en
-	bne .mc_go
-	rts
-.mc_go
-	lda cursor_frame
-	asl
-	asl					; frame * 4 layers
-	clc
-	adc #CURSOR_SPR_PTR0
-	ldx #0
-.mcp
-	sta SCREEN + $3f9,x
-	clc
-	adc #1
-	inx
-	cpx #CURSOR_SPR_COUNT
-	bne .mcp
-	ldx #0
-.mccol
-	lda cursor_spr_cols,x
-	sta $d028,x
-	inx
-	cpx #CURSOR_SPR_COUNT
-	bne .mccol
-	ldx #0
-	ldy #2
-.mcxy
-	lda cursor_spr_x
-	sta $d000,y
-	lda cursor_spr_y
-	sta $d001,y
-	iny
-	iny
-	inx
-	cpx #CURSOR_SPR_COUNT
-	bne .mcxy
-	lda #%00001111
-	asl					; sprites 1–4
-	ora wip_spr_en
-	sta $d015
-	lda #0
-	sta mux_msb
-	lda wip_spr_xmsb
-	sta $d010
-	rts
-
-; Raster IRQ late — WS / AD / RETURN on sprites 1–6 (WIP stays 0).
-mux_hint_spr
-	lda hint_spr_en
-	bne .mh_go
-	rts
-.mh_go
-	ldx #0
-	lda #HINT_SPR_PTR0
-.mhp
-	sta SCREEN + $3f9,x
-	clc
-	adc #1
-	inx
-	cpx #HINT_SPR_COUNT
-	bne .mhp
-	lda #HILITE_COL
-	sta $d028
-	sta $d02a
-	sta $d02c
-	lda #HINT_KEY_COL
-	sta $d029
-	sta $d02b
-	sta $d02d
-	ldx #0
-	ldy #2
-.mhx
-	lda hint_spr_x,x
-	sta $d000,y
-	sta $d002,y
-	iny
-	iny
-	iny
-	iny
-	inx
-	cpx #3
-	bne .mhx
-	lda #HINT_SPR_Y
-	sta $d003
-	sta $d005
-	sta $d007
-	sta $d009
-	sta $d00b
-	sta $d00d
-	lda #%00111111
-	asl					; sprites 1–6
-	ora wip_spr_en
-	sta $d015
-	lda #0
-	sta mux_msb
-	lda wip_spr_xmsb
-	sta $d010
-	rts
-
+	jmp a8_setup_pm
 fill_option_box
 	lda pr_setcol
 	bne .fob_bg
@@ -1651,7 +1052,9 @@ fill_option_box
 	ldy #0
 .fob_c
 	lda tmp0
-	sta (aux_l),y
+
+	jsr a8_note_col
+
 	iny
 	cpy box_width
 	bcc .fob_c
@@ -1663,77 +1066,11 @@ fill_option_box
 
 ; Blank 8 bitmap bytes for cell Y relative to ptr (col base). Saves Y.
 bmp_blank_cell_y
-	sty tmp1
-	tya
-	asl
-	asl
-	asl					; cell offset *8 within row strip
-	tay
-	lda #0
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	iny
-	sta (ptr_l),y
-	ldy tmp1
-	rts
 
-; A=col X=row → ptr=bitmap cell, aux=screen matrix cell
+	jmp a8_blank_cell
 bmp_cell_addr
-	sta pr_col
-	stx pr_row
-	lda #0
-	sta tmp3				; mat_off hi
-	txa
-	asl
-	asl
-	adc pr_row				; *5
-	asl
-	rol tmp3				; *10
-	asl
-	rol tmp3				; *20
-	asl
-	rol tmp3				; *40
-	adc pr_col
-	bcc .bca1
-	inc tmp3
-.bca1
-	sta tmp2				; mat_off lo
-	clc
-	adc #<SCREEN
-	sta aux_l
-	lda tmp3
-	adc #>SCREEN
-	sta aux_h
-	lda tmp2
-	sta ptr_l
-	lda tmp3
-	sta ptr_h
-	asl ptr_l
-	rol ptr_h
-	asl ptr_l
-	rol ptr_h
-	asl ptr_l
-	rol ptr_h				; *8
-	lda ptr_l
-	clc
-	adc #<BITMAP
-	sta ptr_l
-	lda ptr_h
-	adc #>BITMAP
-	sta ptr_h
-	rts
 
+	jmp a8_bmp_cell_addr
 print_centered
 	sta ui_str_l
 	sty ui_str_h
@@ -1829,6 +1166,13 @@ bmp_put_scr
 	bne .bps_go
 	rts
 .bps_go
+
+	ldx pr_row
+	cpx #A8_TEXT0
+	bcc .bps_bmp
+	jmp a8_text_putc
+.bps_bmp
+
 	jsr scr_to_font
 	sta ft_idx
 	ldx pr_mono
@@ -1861,7 +1205,9 @@ bmp_put_scr
 	asl
 	ora cell_bg
 	sta ft_color
-	sta (aux_l),y
+
+	jsr a8_note_col
+
 .bps_pick
 	lda pr_shift
 	bne .bps_sh
@@ -1876,73 +1222,11 @@ bmp_put_scr
 
 ; pr_shift = 0: OR 8 rows, no right cell.
 blit_z
-	ldy #0
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	iny
-	lda (gptr_l),y
-	ora (ptr_l),y
-	sta (ptr_l),y
-	jmp bmp_advance
 
-; Shifted OR blit (16-bit into this cell and the next).
+	jmp a8_blit_z
 blit_nd
-	ldy #0
-.bnd
-	lda (gptr_l),y
-	jsr do_shift
-	ora (ptr_l),y
-	sta (ptr_l),y
-	lda ft_right
-	beq .bnd0
-	ora (ptr_r_l),y
-	sta (ptr_r_l),y
-	sta ft_spill
-.bnd0
-	iny
-	cpy #8
-	bne .bnd
-	jmp .bps_col2
 
-.bps_col2
-	lda pr_setcol
-	beq .bps_adv
-	lda ft_spill
-	beq .bps_adv
-	lda pr_col
-	cmp #39
-	bcs .bps_adv
-	lda ft_color
-	ldy #1
-	sta (aux_l),y
-.bps_adv
-	jmp bmp_advance
-
+	jmp a8_blit_nd
 do_shift
 	ldx #0
 	stx ft_right
@@ -2052,32 +1336,8 @@ bmp_advance
 
 ; ptr/aux follow pr_col/pr_row. Step +8 when the column advances.
 bmp_sync_ptr
-	lda pr_row
-	cmp ft_row
-	bne .sp_re
-	lda pr_col
-	cmp ft_cell
-	beq sync_ptr_r
-	bcc .sp_re
-.sp_fw
-	inc ft_cell
-	lda ptr_l
-	clc
-	adc #8
-	sta ptr_l
-	bcc .sp_p
-	inc ptr_h
-.sp_p
-	lda pr_setcol
-	beq .sp_a
-	inc aux_l
-	bne .sp_a
-	inc aux_h
-.sp_a
-	lda pr_col
-	cmp ft_cell
-	bne .sp_fw
-	jmp sync_ptr_r
+
+	jmp .sp_re
 .sp_re
 	lda pr_col
 	ldx pr_row
@@ -2098,7 +1358,9 @@ sync_ptr_r
 .spr_ok
 	lda ptr_l
 	clc
-	adc #8
+
+	adc #1
+
 	sta ptr_r_l
 	lda ptr_h
 	adc #0
@@ -2260,86 +1522,11 @@ str_len
 
 ; Pixel width of ui_str (incl. FONT_GAP per char) → pr_len / pr_len_h
 str_pix_len
-	lda #0
-	sta pr_len
-	sta pr_len_h
-	ldy #0
-.spl
-	lda (ui_str_l),y
-	beq .spl_d
-	sty ft_src
-	jsr scr_to_font
-	tax
-	lda glyph_w_tab,x
-	bne .spl_a
-	lda #SPACE_W
-.spl_a
-	clc
-	adc #FONT_GAP
-	adc pr_len
-	sta pr_len
-	bcc .spl_n
-	inc pr_len_h
-.spl_n
-	ldy ft_src
-	iny
-	bne .spl
-.spl_d
-	rts
 
-; Visible pixel width ignoring ^ markers → pr_len / pr_len_h
+	jmp a8_pix_len
 marked_str_pix_len
-	lda #0
-	sta pr_len
-	sta pr_len_h
-	sta pr_mono
-	ldy #0
-.mspl
-	lda (ui_str_l),y
-	beq .mspl_d
-	cmp #MARK_CARET
-	bne .mspl_ch
-	lda pr_mono
-	eor #1
-	sta pr_mono
-	beq .mspl_s
-	jsr pix_snap_len
-	jmp .mspl_s
-.mspl_ch
-	ldx pr_mono
-	bne .mspl_8
-	sty ft_src
-	jsr scr_to_font
-	tax
-	lda glyph_w_tab,x
-	bne .mspl_a
-	lda #SPACE_W
-.mspl_a
-	clc
-	adc #FONT_GAP
-	adc pr_len
-	sta pr_len
-	bcc .mspl_c
-	inc pr_len_h
-.mspl_c
-	ldy ft_src
-	jmp .mspl_s
-.mspl_8
-	lda pr_len
-	clc
-	adc #8
-	sta pr_len
-	bcc .mspl_s
-	inc pr_len_h
-.mspl_s
-	iny
-	bne .mspl
-.mspl_d
-	lda #0
-	sta pr_mono
-	rts
 
-; Round pr_len up to a multiple of 8 (cell snap before mono).
+	jmp a8_pix_len
 pix_snap_len
 	lda pr_len
 	and #7
@@ -2378,150 +1565,14 @@ str_skip
 ; Hide full redraws: DEN off fills the screen with $d020. Sprites off.
 ; Menus/credits: black border. Story: black (STORY_BG).
 menu_blank
-	lda $d011
-	and #%11101111				; DEN off
-	sta $d011
-	lda clear_bg
-	cmp #STORY_BG
-	beq .mb_c
-	lda #MENU_BORDER
-.mb_c
-	sta $d020
-	sta $d021
-	lda #0
-	sta $d015
-	sta hint_spr_en
-	sta cursor_spr_en
-	rts
 
-; Reveal after paint. $d021 from clear_bg (story pages use STORY_BG).
+	jmp a8_menu_blank
 menu_unblank
-	lda #MENU_BORDER
-	sta $d020
-	lda clear_bg
-	sta $d021
-	lda $d011
-	ora #%00010000				; DEN on
-	sta $d011
-!if MENU_WIP_SPR {
-	lda #%01111111
-	ora wip_spr_en
-} else {
-	lda #%01111110
-}
-	sta $d015
-	rts
 
-wait_raster
-	lda $d012
-.wr
-	cmp $d012
-	beq .wr
-	rts
-
+	jmp a8_menu_unblank
 wait_frame
-.wf_hi
-	lda $d011
-	bpl .wf_hi
-.wf_lo
-	lda $d011
-	bmi .wf_lo
-!if MENU_WIP_SPR {
-	jsr update_wip_spr
-}
-	inc cursor_tick
-	lda cursor_tick
-	cmp #5				; ~10 Hz on PAL, same as Quake menudot
-	bcc .wf_rts
-	lda #0
-	sta cursor_tick
-	inc cursor_frame
-	lda cursor_frame
-	cmp #CURSOR_FRAMES
-	bcc .wf_rts
-	lda #0
-	sta cursor_frame
-.wf_rts
-	rts
 
-!source "rbcal.asm"
-
-!if MENU_WIP_SPR {
-; DVD bounce on sprite 0. X is 16-bit (low + $d010 bit 0).
-update_wip_spr
-	lda wip_dx
-	bpl .uw_xp
-	lda wip_x
-	bne .uw_xd
-	dec wip_spr_xmsb
-.uw_xd
-	dec wip_x
-	jmp .uw_xc
-.uw_xp
-	inc wip_x
-	bne .uw_xc
-	inc wip_spr_xmsb
-.uw_xc
-	lda wip_spr_xmsb
-	bne .uw_xh
-	lda wip_x
-	cmp #WIP_X_MIN
-	bcs .uw_xh
-	lda #1
-	sta wip_dx
-	lda #WIP_X_MIN
-	sta wip_x
-	lda #0
-	sta wip_spr_xmsb
-	jmp .uw_y
-.uw_xh
-	lda wip_spr_xmsb
-	beq .uw_y
-	lda wip_x
-	cmp #<(WIP_X_MAX + 1)
-	bcc .uw_y
-	lda #$ff
-	sta wip_dx
-	lda #<WIP_X_MAX
-	sta wip_x
-	lda #>WIP_X_MAX
-	sta wip_spr_xmsb
-.uw_y
-	lda wip_y
-	clc
-	adc wip_dy
-	sta wip_y
-	cmp #WIP_Y_MIN
-	bcc .uw_yl
-	cmp #WIP_Y_MAX + 1
-	bcc .uw_hw
-	lda #$ff
-	sta wip_dy
-	lda #WIP_Y_MAX
-	sta wip_y
-	jmp .uw_hw
-.uw_yl
-	lda #1
-	sta wip_dy
-	lda #WIP_Y_MIN
-	sta wip_y
-.uw_hw
-	lda wip_spr_en
-	beq .uw_rts
-	lda wip_x
-	sta $d000
-	lda wip_y
-	sta $d001
-	php					; the raster IRQ owns the other $d010 bits
-	sei					; (logo E MSB): read mux_msb + store atomically
-	lda mux_msb
-	ora wip_spr_xmsb
-	sta $d010
-	plp
-.uw_rts
-	rts
-}
-
+	jmp a8_wait_frame
 wait_frames_x
 .wf
 	jsr wait_frame
@@ -2548,103 +1599,11 @@ wait_key
 ; Wait for release + a few quiet frames so Return-to-enter doesn't bounce-dismiss.
 ; wait_frame each poll so the WIP sprite keeps bouncing.
 wait_any_key
-.wau
-	jsr wait_frame
-	lda #0
-	sta $dc00
-	lda $dc01
-	cmp #$ff
-	bne .wau
-	ldx #2
-.wau_s
-	jsr wait_frame
-	lda #0
-	sta $dc00
-	lda $dc01
-	cmp #$ff
-	bne .wau
-	dex
-	bne .wau_s
-.wad
-	jsr wait_frame
-	lda #0
-	sta $dc00
-	lda $dc01
-	cmp #$ff
-	beq .wad
-.war
-	jsr wait_frame
-	lda #0
-	sta $dc00
-	lda $dc01
-	cmp #$ff
-	bne .war
-	rts
 
+	jmp a8_wait_any
 ui_read_keys
-	lda ui_keys
-	sta ui_old
-	lda #0
-	sta ui_keys
 
-	lda #$fd
-	sta $dc00
-	lda $dc01
-	tax
-	and #$02
-	bne .urk_now
-	lda ui_keys
-	ora #UI_UP
-	sta ui_keys
-.urk_now
-	txa
-	and #$20
-	bne .urk_nos
-	lda ui_keys
-	ora #UI_DOWN
-	sta ui_keys
-.urk_nos
-	txa
-	and #$04
-	bne .urk_noa
-	lda ui_keys
-	ora #UI_LEFT
-	sta ui_keys
-.urk_noa
-	lda #$fb
-	sta $dc00
-	lda $dc01
-	and #$04
-	bne .urk_nod
-	lda ui_keys
-	ora #UI_RIGHT
-	sta ui_keys
-.urk_nod
-	lda #$fe
-	sta $dc00
-	lda $dc01
-	and #$02
-	bne .urk_noret
-	lda ui_keys
-	ora #UI_SELECT
-	sta ui_keys
-.urk_noret
-	lda #$7f
-	sta $dc00
-	lda $dc01
-	and #$80
-	bne .urk_noesc
-	lda ui_keys
-	ora #UI_ESC
-	sta ui_keys
-.urk_noesc
-	lda ui_old
-	eor #$ff
-	and ui_keys
-	sta ui_pressed
-	rts
-
-; --- state / strings --------------------------------------------------------
+	jmp a8_ui_read
 menu_id		!byte 0
 menu_item	!byte 0
 menu_prev	!byte 0
@@ -2653,15 +1612,6 @@ menu_stack_d	!byte 0
 menu_can_ret	!byte 0
 hint_spr_en	!byte 0
 cursor_spr_en	!byte 0
-wip_spr_en	!byte 0
-wip_spr_xmsb	!byte 0
-mux_msb		!byte 0				; non-WIP $d010 bits set by the current mux phase
-!if MENU_WIP_SPR {
-wip_x		!byte 0
-wip_y		!byte 0
-wip_dx		!byte 0
-wip_dy		!byte 0
-}
 cursor_frame	!byte 0
 cursor_tick	!byte 0
 menu_mux_phase	!byte 0
@@ -2673,6 +1623,8 @@ music_zp	!fill MUSIC_ZP_N, 0		; player's $f0-$f7 while the menu owns ZP
 hint_spr_x	!byte 0, 0, 0
 cursor_spr_x	!byte 0
 cursor_spr_y	!byte 0
+cursor_col	!byte 0
+cursor_row	!byte 0
 hint_tx		!byte 0, 0, 0
 hint_px		!byte 0
 hint_w0		!byte 0
@@ -2737,7 +1689,10 @@ str_e2		!scr "The Realm of Black Magic",0
 str_e3		!scr "The Netherworld",0
 str_e4		!scr "The Elder World",0
 str_fx_vol	!scr "Effects Volume 15",0
-str_mouse	!scr "Mouse (port 1) Off",0
+
+str_mouse	!scr "ST mouse (port 2) "
+
+str_mouse_bit	!scr "Off",0
 str_flesh	!scr "Flesh and Bone",0
 str_nails	!scr "Hard as Nails",0
 str_uv		!scr "Nightmare",0
@@ -2759,7 +1714,11 @@ section_hi
 
 menu_str_lo
 	!byte <str_new_game, <str_sound, <str_control, <str_read_this
+!if  JUKEBOX {
 	!byte <str_credits, <str_juke, <str_quit, 0
+} else {
+	!byte <str_credits, <str_quit, 0, 0
+}
 	!byte <str_e1, <str_e2, <str_e3, <str_e4
 	!byte <str_back, 0, 0, 0
 	!byte <str_flesh, <str_nails, <str_uv, <str_back
@@ -2770,7 +1729,11 @@ menu_str_lo
 	!byte 0, 0, 0, 0
 menu_str_hi
 	!byte >str_new_game, >str_sound, >str_control, >str_read_this
+!if  JUKEBOX {
 	!byte >str_credits, >str_juke, >str_quit, 0
+} else {
+	!byte >str_credits, >str_quit, 0, 0
+}
 	!byte >str_e1, >str_e2, >str_e3, >str_e4
 	!byte >str_back, 0, 0, 0
 	!byte >str_flesh, >str_nails, >str_uv, >str_back
@@ -2783,14 +1746,17 @@ menu_str_hi
 !source "menu_title.asm"
 !source "menu_hint_spr.asm"
 !source "menu_cursor_spr.asm"
-!if MENU_WIP_SPR {
-!source "menu_wip_spr.asm"
-}
 !source "uifont_data.asm"
-!source "menu_sfx.asm"
+
 !source "menu_music.asm"
 
+!source "a8menuhw.asm"
+!source "a8music.asm"
+
+
 end_menu = *
-!if end_menu > WIP_SPR_RAM {
-	!error "Menu overlaps WIP_SPR_RAM; end=$", end_menu
-}
+
+	!if  end_menu >= MUS_BSS {
+		!error "Menu overlaps the music state / ring ($6F00-$7FFF, bitmap at $8000); end=$", end_menu
+	}
+

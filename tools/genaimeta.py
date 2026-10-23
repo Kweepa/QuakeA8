@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mkreloc import ABS_OPS, parse_mem_const
+from mkreloc import ABS_OPS, parse_labels, parse_mem_const, smc_field, smc_sites
 
 ROOT = Path(__file__).resolve().parents[1]
 ENEMY_DIR = ROOT / "enemies"
@@ -34,9 +34,13 @@ ABSOLUTE = ABS_OPS | {
 }
 
 
-def scan(code: bytes, link: int, sentinel: int) -> tuple[list[int], list[int]]:
+def scan(code: bytes, link: int, sentinel: int) -> list[int]:
+    """Operand offsets of abs targets inside this module.
+
+    Map accessors (operand hi = sentinel) are not internal relocs; those
+    offsets come from the smc_N labels.
+    """
     internal: list[int] = []
-    map_sites: list[int] = []
     pc = 0
     while pc < len(code):
         op = code[pc]
@@ -46,12 +50,20 @@ def scan(code: bytes, link: int, sentinel: int) -> tuple[list[int], list[int]]:
         if size == 3 and op in ABSOLUTE:
             lo, hi = code[pc + 1], code[pc + 2]
             target = lo | (hi << 8)
-            if op in ABS_OPS and hi == sentinel:
-                map_sites.append(pc + 1)
-            elif link <= target < link + len(code):
+            if not (op in ABS_OPS and hi == sentinel) and link <= target < link + len(code):
                 internal.append(pc + 1)
         pc += size
-    return internal, map_sites
+    return internal
+
+
+def map_operand_offs(lbl: Path, code: bytes, link: int, sentinel: int) -> list[int]:
+    if not lbl.is_file():
+        raise SystemExit(f"{lbl}: missing — assemble with --vicelabels")
+    offs: list[int] = []
+    for addr in smc_sites(parse_labels(lbl)):
+        smc_field(code, link, addr, sentinel, lbl.name)
+        offs.append(addr - link + 1)
+    return offs
 
 
 def main() -> None:
@@ -63,7 +75,8 @@ def main() -> None:
         if not path.is_file():
             continue
         code = path.read_bytes()
-        internal, map_sites = scan(code, link, sentinel)
+        internal = scan(code, link, sentinel)
+        map_sites = map_operand_offs(ENEMY_DIR / f"ai_{dos}.lbl", code, link, sentinel)
         out = ENEMY_DIR / f"ai_{dos}.rel"
         out.write_text(
             json.dumps(
@@ -81,7 +94,8 @@ def main() -> None:
     skel_path = ENEMY_DIR / "skel_draw.bin"
     if skel_path.is_file():
         code = skel_path.read_bytes()
-        internal, map_sites = scan(code, link, sentinel)
+        internal = scan(code, link, sentinel)
+        map_sites = map_operand_offs(ENEMY_DIR / "skel_draw.lbl", code, link, sentinel)
         out = ENEMY_DIR / "skel_draw.rel"
         out.write_text(
             json.dumps(

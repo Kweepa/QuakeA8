@@ -1,16 +1,14 @@
-# Quake64
+# Quake on the Atari 800XL
 
-A Commodore 64 *Quake* demake: a 3D line-drawn world in custom character graphics, with portal rooms, stick-figure enemies, and sprite weapons.
-
-The playable binary is `quake64.d64` (download from the repo). Autostart it in VICE. A hires menu boots into **E1M1**. The layout is in: doors, ramps, elevators, switches, pickups, and combat.
+A line-drawn *Quake* demake for the Atari 8-bit: portal rooms, stick-figure enemies, and a mode-E world. The playable disk is `quake.atr`. Boot it in Altirra (800XL, 64K). The menu starts **E1M1**.
 
 ## Display
 
-The 3D view is a **192×128** custom-charset window (24×16 tiles), double-buffered in VIC Bank 3 (`$C000–$FFFF`). A raster IRQ at the mid-window split (`$D018`) switches between two 256-tile charsets.
+The 3D view is a **mode-E** window under a 9-row text HUD. The world is still projected at 192×128; the plotter keeps every other column, so 96 colour-clock pixels are drawn in the middle of each 32-byte row. Two bitmaps (`$C000` and `$E000`) swap each frame. Lines are unrolled Bresenham bodies in `a8line.asm`.
 
-Each frame **wipes the live 24 charset columns** (~16.6k cycles). Dirty-tile tracking was dropped: the bookkeeping slowed the line plotter, and the savings only showed up in sparse frames. Lines are Mike’s 8×-unrolled Bresenham from Denial (cached column pointer, immediate bit masks), with special cases for verticals and the y=64 charset join.
+The HUD is the text window: title, map name, shells / nails / grenades, health, armour, and a powerup icon. Pickup names and trigger messages flash on a status line. Frame time in ms can sit on row 0.
 
-The HUD contains title, map name, shells / nails / grenades, health, armour, and a powerup icon. Pickup names and trigger messages flash on a status line. Frame time in ms can sit on row 0 for now. The viewport sits at the bottom  with per-room sky, line, and weapon colours.
+## World
 
 ## World
 
@@ -34,46 +32,20 @@ Yaw is rolled(!) into the world rotation to avoid a double rotate. Perspective a
 
 **Axe** is melee. **Super shotgun** is a hitscan with range falloff, blood on a hit and a wall splat on a miss. **Nailgun** is a tighter hitscan (smaller cone, lower damage, same LOS / splat path). **Grenade launcher** throws a bouncing grenade (player and ogre) with splash damage. The blast is a half-dome of charset pixels: six unique directions, the other three quadrants filled with 90° Y rotates.
 
-The player weapon is **four hardware sprites** in a 2×2 grid, plus extra sprites for muzzle flash, enemy muzzle, and impact splat. Unplotted sprite pixels stay transparent so world lines show through the gun; bob and recoil are sprite x,y offsets.
+The player weapon is stamped into the mode-E bitmap (body, muzzle, enemy muzzle, impact splat). Bob and recoil move that stamp.
 
-SFX are PC-speaker envelopes on all three SID voices (player / enemy / world).
+SFX are PC-speaker envelopes on POKEY channels (player / enemy / world).
 
 ## Build
 
-6502 (ACME) plus Python table generators. Copy `setup-env.example.bat` to `setup-env.bat` and point `ACME` / `VICE` at your installs.
+6502 (ACME) plus Python table generators. Copy `setup-env.example.bat` to `setup-env.bat` and point `ACME` at your install.
 
 ```bat
-build.bat          :: generate listings, assemble PRGs, write quake64.d64
-make.bat           :: build and autostart quake64.d64 in VICE
-make-cart.bat      :: pack quake64.d64 into an EasyFlash quake64.crt
+build-a8.bat       :: generate listings, assemble PRGs, write quake.atr
+make.bat           :: build-a8.bat, then boot quake.atr in Altirra
+run-game.bat       :: boot quake.atr in Altirra
 run-editor.bat     :: local map / skeleton / item editor
 ```
 
-The Krill disk (`quake64-krill.d64`) needs a real 1541-class drive or VICE true drive emulation. EasyFlash stays on the KERNAL disk.
-
-## EasyFlash cartridge
-
-To pack the disk image into an EasyFlash `.crt` for real hardware or emulation:
-
-1. Download **Disk2Easyflash v1.1** from [milasoft64/Disk2Easyflash-v1](https://github.com/milasoft64/Disk2Easyflash-v1) (file: `v1.1/disk2easyflash_v1.1.py`) or [CSDb](https://csdb.dk/release/?id=260920).
-2. Save it as `3rdparty/disk2easyflash.py`. Keep this file locally for `make-cart.bat`; the whole `3rdparty/` directory is gitignored and not pushed to GitHub.
-3. Run after building the disk:
-
-```bat
-build.bat
-make-cart.bat
-```
-
-Output: `quake64.crt`.
-
-### Third-party tool — Disk2Easyflash
-
-`3rdparty/disk2easyflash.py` is **not included** in this repository (kept separate from the project's own `tools/` scripts). Obtain it from upstream:
-
-- **v1.1 (recommended):** [GitHub — milasoft64/Disk2Easyflash-v1](https://github.com/milasoft64/Disk2Easyflash-v1) / [CSDb release](https://csdb.dk/release/?id=260920) — enhancements by MilaSoft
-- **Original logic:** [alexkazik/disk2easyflash](https://github.com/alexkazik/disk2easyflash) — licensed under [0BSD](https://opensource.org/license/0bsd)
-
-MilaSoft's v1.1 release does not declare a separate license on GitHub; the original Alex Kazik code is 0BSD. The EasyFlash cart is built from the KERNAL disk (`quake64.d64`); Krill drive code is 1541-only.
-
-Keys: **WASD** move / strafe, **J/L** turn, **K** use, **SPACE** fire, **1–4** axe / shotgun / nailgun / grenade launcher. Enable the mouse in Options to turn and shoot from port 1.
+Keys: **WASD** move / strafe, **J/L** turn, **K** use, **SPACE** fire, **1–4** axe / shotgun / nailgun / grenade launcher. Enable the mouse in Options to turn and shoot.
 

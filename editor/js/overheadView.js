@@ -6,9 +6,9 @@ import {
   activeMap,
   WORLD_SIZE,
   isGhostKind,
-  colorHex,
+  a8Hex,
+  a8InkHex,
   ROOM_BG_DEFAULT,
-  ROOM_LINE_DEFAULT,
   roomGeometry,
 } from "./model.js";
 import { lookVectors } from "./math3d.js";
@@ -160,8 +160,8 @@ export class OverheadView {
       const isCur = cur && obj.id === cur.id;
       const isN = neigh.some((n) => n.id === obj.id);
       const faded = vis && !vis.has(obj.id);
-      const bgHex = colorHex(obj.bgColor ?? ROOM_BG_DEFAULT);
-      const lineHex = colorHex(obj.lineColor ?? ROOM_LINE_DEFAULT);
+      const bgHex = a8Hex(obj.a8Bg ?? ROOM_BG_DEFAULT);
+      const lineHex = a8InkHex(obj.a8Bg ?? ROOM_BG_DEFAULT);
       const fill = isCur
         ? hexAlpha(bgHex, 0.28)
         : isN

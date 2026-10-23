@@ -1,5 +1,5 @@
 ; Streamed Demon attack behavior. Linked at AI_LINK_BASE, relocated on load.
-!cpu 6510
+!cpu 6502
 !to "../enemies/ai_demon.bin", plain
 !source "mem.asm"
 !source "zp.asm"

@@ -2,6 +2,7 @@
 """Build src/menu_text.asm from control/credits/readthis/ending txt files.
 
 credits.txt / readthis.txt / ending.txt are split into screens on lines that are only '^'.
+readthis.txt lines are copied as written and must be at most READTHIS_COLS columns.
 """
 from __future__ import annotations
 
@@ -14,6 +15,8 @@ OUT = ROOT / "src" / "menu_text.asm"
 CREDITS = ROOT / "credits.txt"
 READTHIS = ROOT / "readthis.txt"
 ENDING = ROOT / "ending.txt"
+# Story panel is 38 columns: one cell of margin on a 40-column screen.
+READTHIS_COLS = 38
 
 # label, source txt (no yellow title — body only)
 SCREENS = (
@@ -81,10 +84,28 @@ def split_caret_pages(text: str) -> list[list[str]]:
 	return cleaned
 
 
-def emit_caret_pages(path: Path, prefix: str, count_sym: str, lo_sym: str, hi_sym: str) -> list[str]:
+def check_cols(pages: list[list[str]], width: int, name: str) -> None:
+	for page in pages:
+		for line in page:
+			if len(line) > width:
+				raise SystemExit(
+					f"{name} line is {len(line)} columns (max {width}): {line}"
+				)
+
+
+def emit_caret_pages(
+	path: Path,
+	prefix: str,
+	count_sym: str,
+	lo_sym: str,
+	hi_sym: str,
+	max_cols: int | None = None,
+) -> list[str]:
 	if not path.is_file():
 		raise SystemExit(f"missing {path}")
 	pages = split_caret_pages(path.read_text(encoding="utf-8"))
+	if max_cols is not None:
+		check_cols(pages, max_cols, path.name)
 	if not pages:
 		raise SystemExit(f"{path.name} has no screens")
 	if len(pages) > 255:
@@ -113,7 +134,10 @@ def main() -> None:
 			raise SystemExit(f"missing {path}")
 		out.extend(emit_blob(label, path))
 	out.extend(emit_caret_pages(CREDITS, "credits", "CREDITS_PAGES", "credits_lo", "credits_hi"))
-	out.extend(emit_caret_pages(READTHIS, "readthis", "READTHIS_PAGES", "readthis_lo", "readthis_hi"))
+	out.extend(emit_caret_pages(
+		READTHIS, "readthis", "READTHIS_PAGES", "readthis_lo", "readthis_hi",
+		max_cols=READTHIS_COLS,
+	))
 	out.extend(emit_caret_pages(ENDING, "ending", "ENDING_PAGES", "ending_lo", "ending_hi"))
 	OUT.write_text("\n".join(out), encoding="utf-8")
 	print(f"wrote {OUT.relative_to(ROOT)}")

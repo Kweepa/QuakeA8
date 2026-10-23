@@ -1,7 +1,7 @@
 Quake is a trademark of
 id software llc/zenimax media inc.
 
-Unofficial commodore 64 fan port
+Unofficial atari 8-bit fan port
 created by steve mccrea in 2026.
 
 Not affiliated with or endorsed
@@ -17,12 +17,10 @@ tim willits, adrian carmack,
 kevin cloud, paul steed,
 trent reznor & nine inch nails.
 ^
-Line draw routine by michael kircher.
-music by mandy kane.
-loader by krill/plush.
-loader integration by chris masiero.
-title screen by paul docherty.
+Original music by mandy kane,
+butchered by an automatic sid to
+pokey translation.
 
 Thanks y'all!
 
-Quake64 v1.00.0, built 17 Oct 2026
+QuakeA8 v1.00.0, built 22 Oct 2026

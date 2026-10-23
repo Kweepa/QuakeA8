@@ -36,9 +36,12 @@ sfx_q
 fs_save_x
 	!byte 0				; flush_sfx loop index (IRQ-private; not ZP)
 
-; SID Fn-lo offset from $d400 per channel (V1/V2/V3)
+; SID Fn-lo offset from $d400 per channel (V1/V2/V3).
+; Atari: AUDF offset from $D200 (channels 1-3).
 sfx_sid_base
-	!byte $00, $07, $0e
+
+	!byte $00, $02, $04
+
 
 ; ------------------------------------------------------------------
 ; play_sound_init — clear SID; PW+ADSR defaults; volume full
@@ -62,37 +65,21 @@ play_sound_init
 	sta sfx_max,x
 	dex
 	bpl .psi_ch
-	ldx #$18
+
+	jsr a8_pokey_play
 	lda #0
-.psi_clr
-	sta $d400,x
-	dex
-	bpl .psi_clr
-	jsr sfx_voice_adsr_all
-	lda effects_vol
-	and #SFX_VOL
-	sta $d418
+	sta $d201
+	sta $d203
+	sta $d205
+	sta $d207
 	rts
+
 
 ; Default PW 50% + ADSR on all voices (per-sound AD on commit).
 sfx_voice_adsr_all
-	lda #$00
-	sta $d402				; V1 PW lo — 50%
-	sta $d409				; V2 PW lo
-	sta $d410				; V3 PW lo
-	lda #$08
-	sta $d403				; V1 PW hi
-	sta $d40a				; V2 PW hi
-	sta $d411				; V3 PW hi
-	lda #$00
-	sta $d405				; V1 AD
-	sta $d40c				; V2 AD
-	sta $d413				; V3 AD
-	lda #$f0
-	sta $d406				; V1 SR
-	sta $d40d				; V2 SR
-	sta $d414				; V3 SR
+
 	rts
+
 
 ; ------------------------------------------------------------------
 ; play_sound — A = sound index; stage for mid-split IRQ.
@@ -158,12 +145,7 @@ play_sound_commit
 	pla
 	and #$f0				; attack<<4, decay 0
 	sta sfx_sr
-	lda sfx_sid_base,x
-	tay
-	lda #0
-	sta $d404,y				; gate off so attack sees 0 to 1
-	lda sfx_sr
-	sta $d405,y
+
 
 	clc
 	lda sfx_zp_l
@@ -265,26 +247,23 @@ update_sfx
 	bne .us_stop_vol
 	jsr elev_noise_restore
 .us_stop_vol
-	lda effects_vol
-	and #SFX_VOL
-	sta $d418
+
 	jmp .us_next
 
-; sfx_id = inverse-freq byte; sfx_ch = channel.
-; AD was set on commit; rewrite SR (full sustain) + pulse+gate each tick.
+; sfx_id = POKEY AUDF (0 = silence); sfx_ch = channel.
 sfx_write_tone
+
 	ldx sfx_ch
 	lda sfx_sid_base,x
 	tay
-	lda #$80
-	sta $d400,y
-	lda sfx_id				; baked Fn hi
-	sta $d401,y
-	lda #$f0				; sustain 15, release 0 (PW set in sfx_voice_adsr_all)
-	sta $d406,y
-	lda #$41				; pulse + gate
-	sta $d404,y
+	lda sfx_id
+	sta $d200,y
+	lda effects_vol
+	and #$0f
+	ora #$a0				; pure tone
+	sta $d201,y
 	rts
+
 
 ; sfx_ch = channel → gate off that voice
 sfx_gate_off
@@ -292,7 +271,9 @@ sfx_gate_off
 	lda sfx_sid_base,x
 	tay
 	lda #0
-	sta $d404,y
+
+	sta $d201,y
+
 	rts
 
 ; ------------------------------------------------------------------
@@ -306,15 +287,9 @@ elev_noise_restore
 	lda sfx_index+2
 	bpl .enr_rts				; world SFX still owns V3
 elev_noise_program
-	lda #$02
-	sta $d40f				; V3 Fn hi — low rumble
-enp_rest
-	lda #$00
-	sta $d40e				; V3 Fn lo
-	sta $d413				; AD
-	lda #$f8
-	sta $d414				; SR sustain
-	lda #$81				; noise + gate
-	sta $d412
+
+	rts
+
 .enr_rts
 	rts
+

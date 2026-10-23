@@ -1,7 +1,7 @@
 ; LoadLevel overlay — PIC (relative branches only; abs to ZP / BSS / GAME).
 ; Assembled at *$0000, prepended to each map, dumped after bind+patch.
 ; Entry: AY = bind_tab address. Falls through bind_apply into patch_map_smc.
-!cpu 6510
+!cpu 6502
 !to "overlay.bin", plain
 
 !source "mem.asm"
@@ -178,9 +178,6 @@ bind_tab
 	+bind_add room_sy, map_nrooms
 	+bind_add room_sz, map_nrooms
 	+bind_add room_bg, map_nrooms
-	+bind_add room_line, map_nrooms
-	+bind_add room_fx, map_nrooms
-	+bind_add room_wpn, map_nrooms
 	+bind_set_n3
 	+bind_add rc_x, bind_n
 	+bind_add rc_y, bind_n

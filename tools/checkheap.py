@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Simulate LoadLevel heap vs GAME size; fail the build if a map cannot load.
 
-Heap grows down from SCR_A. LoadLevel: one E1Mn (prefix overlay+reloc, then
-packed map), dump prefix (heap_top = map_base), then pose banks. heap_alloc
-fails when new top <= end_game, so need must be strictly less than
-SCR_A - end_game.
+Heap grows down from HEAP_LIM ($BC00 on the Atari, SCR_A on the C64).
+LoadLevel: one E1Mn (prefix overlay+reloc, then packed map), dump prefix
+(heap_top = map_base), then pose banks. heap_alloc fails when new top
+<= end_game, so need must be strictly less than HEAP_LIM - end_game.
 
 An OVER map (slack zero or negative) is printed and does not fail the build.
 A room with more than ROOM_MAX_TYPES types, or a missing pose, still fails.
@@ -151,9 +151,9 @@ def heap_report(labels_path: Path | str) -> tuple[dict, bool]:
 
     end_game = labels["end_game"]
     locode = parse_mem_const("LOCODE_BASE")
-    scr_a = parse_mem_const("SCR_A")
+    heap_lim = parse_mem_const("HEAP_LIM")
     prefix = parse_level_prefix()
-    avail = scr_a - end_game
+    avail = heap_lim - end_game
     poses = enemy_sizes()
     crush_sz = crush_bank_size()
     names_by_level = level_room_names()

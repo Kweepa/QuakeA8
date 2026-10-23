@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 
 from genaibanks import DOS_NAMES, HEADER_SIZE, MAGIC, NO_ENTRY
-from genaimeta import scan
+from genaimeta import map_operand_offs, scan
 from mkreloc import parse_mem_const
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +37,8 @@ def main() -> None:
         internal = [off - code_off for off in words[:rel_n]]
         map_sites = [off - code_off for off in words[rel_n:]]
         code = payload[code_off:pose_off]
-        scanned_internal, scanned_map = scan(code, link, sentinel)
+        scanned_internal = scan(code, link, sentinel)
+        scanned_map = map_operand_offs(ENEMY_DIR / f"ai_{dos}.lbl", code, link, sentinel)
         if internal != scanned_internal or map_sites != scanned_map:
             raise SystemExit(f"{path}: relocation metadata does not match code")
         for off in internal:
@@ -71,7 +72,8 @@ def main() -> None:
         internal = [off - code_off for off in words[:rel_n]]
         map_sites = [off - code_off for off in words[rel_n:]]
         code = payload[code_off:pose_off]
-        scanned_internal, scanned_map = scan(code, link, sentinel)
+        scanned_internal = scan(code, link, sentinel)
+        scanned_map = map_operand_offs(ENEMY_DIR / "ai_crush.lbl", code, link, sentinel)
         if internal != scanned_internal or map_sites != scanned_map:
             raise SystemExit(f"{path}: relocation metadata does not match code")
         print(

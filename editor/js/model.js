@@ -488,66 +488,104 @@ export function clampEnemyLodZ(n, name) {
   return Math.max(0, Math.min(255, v | 0));
 }
 
-/** Default room viewport colours (C64 indices). */
-export const ROOM_BG_DEFAULT = 9;
-export const ROOM_LINE_DEFAULT = 7;
-export const ROOM_FX_DEFAULT = 1;
-export const ROOM_WPN_DEFAULT = 0;
-/** @deprecated Use ROOM_BG_DEFAULT */
-export const ROOM_SKY_DEFAULT = ROOM_BG_DEFAULT;
-/** @deprecated */
-export const ROOM_FLOOR_DEFAULT = ROOM_BG_DEFAULT;
+/**
+ * Room colour is one Atari byte: hue in the high nibble, luminance in the low
+ * nibble (bit 0 unused). The game feeds it straight to COLPF0 (paper); ink is
+ * the same hue at luminance $0e. No other per-room colours exist.
+ */
+export const ROOM_BG_GREY_DARK = 0x04;
+export const ROOM_BG_GREY_LIGHT = 0x0a;
 
-/** Pepto Commodore 64 palette (indices 0–15). */
-export const C64_HEX = [
-  "#000000",
-  "#ffffff",
-  "#813338",
-  "#75cec8",
-  "#8e3c97",
-  "#56ac4d",
-  "#40318d",
-  "#bfce72",
-  "#8e5029",
-  "#553f00",
-  "#c46c71",
-  "#4a4a4a",
-  "#7b7b7b",
-  "#a9ff9f",
-  "#706deb",
-  "#b2b2b2",
+/** Picker slots. Slot i is also what legacy C64 bgColor i converts to. */
+export const ROOM_BG_SLOTS = [
+  { name: "dark grey (was black)", byte: ROOM_BG_GREY_DARK },
+  { name: "light grey (was white)", byte: ROOM_BG_GREY_LIGHT },
+  { name: "red", byte: 0x42 },
+  { name: "cyan", byte: 0xa6 },
+  { name: "purple", byte: 0x64 },
+  { name: "green", byte: 0xc4 },
+  { name: "blue", byte: 0x84 },
+  { name: "yellow", byte: 0x1c },
+  { name: "orange", byte: 0x26 },
+  { name: "brown", byte: 0x24 },
+  { name: "light red", byte: 0x4a },
+  { name: "dark grey", byte: 0x06 },
+  { name: "grey", byte: 0x08 },
+  { name: "light green", byte: 0xca },
+  { name: "light blue", byte: 0x9a },
+  { name: "light grey", byte: 0x0c },
 ];
 
-export const C64_NAMES = [
-  "black",
-  "white",
-  "red",
-  "cyan",
-  "purple",
-  "green",
-  "blue",
-  "yellow",
-  "orange",
-  "brown",
-  "light red",
-  "dark grey",
-  "grey",
-  "light green",
-  "light blue",
-  "light grey",
+/** Default room background (A8 byte; the old brown). */
+export const ROOM_BG_DEFAULT = 0x24;
+
+/** A8 RGB, [hue * 8 + (lum >> 1)]. Approximate NTSC GTIA, preview only. */
+export const A8_HEX = [
+  // hue 0
+  "#000000", "#242424", "#494949", "#6d6d6d", "#929292", "#b6b6b6", "#dbdbdb", "#ffffff",
+  // hue 1
+  "#1d0a00", "#422f00", "#665300", "#8b7700", "#af9c10", "#d4c035", "#f8e559", "#ffff7d",
+  // hue 2
+  "#380000", "#5d1b00", "#813f00", "#a6630c", "#ca8831", "#efac55", "#ffd179", "#fff59e",
+  // hue 3
+  "#4a0000", "#6e0800", "#932d19", "#b7513d", "#db7562", "#ff9a86", "#ffbeab", "#ffe3cf",
+  // hue 4
+  "#4e000a", "#73002e", "#971f53", "#bc4477", "#e0689b", "#ff8cc0", "#ffb1e4", "#ffd5ff",
+  // hue 5
+  "#450042", "#6a0066", "#8e198a", "#b33daf", "#d762d3", "#fb86f8", "#ffabff", "#ffcfff",
+  // hue 6
+  "#30006e", "#550093", "#791bb7", "#9e3fdb", "#c264ff", "#e688ff", "#ffadff", "#ffd1ff",
+  // hue 7
+  "#130088", "#3700ac", "#5c25d1", "#8049f5", "#a56eff", "#c992ff", "#eeb7ff", "#ffdbff",
+  // hue 8
+  "#00008a", "#1711ae", "#3b35d3", "#6059f7", "#847eff", "#a9a2ff", "#cdc7ff", "#f1ebff",
+  // hue 9
+  "#000074", "#002498", "#1d49bd", "#416de1", "#6692ff", "#8ab6ff", "#afdaff", "#d3ffff",
+  // hue A
+  "#00144a", "#00386f", "#065c93", "#2b81b7", "#4fa5dc", "#74caff", "#98eeff", "#bcffff",
+  // hue B
+  "#002413", "#004838", "#006d5c", "#209181", "#44b6a5", "#68daca", "#8dfeee", "#b1ffff",
+  // hue C
+  "#002e00", "#005200", "#007722", "#229b47", "#46c06b", "#6be490", "#8fffb4", "#b4ffd8",
+  // hue D
+  "#003000", "#005500", "#0d7900", "#319d13", "#56c238", "#7ae65c", "#9eff81", "#c3ffa5",
+  // hue E
+  "#002a00", "#024e00", "#267300", "#4b9700", "#6fbc14", "#94e038", "#b8ff5d", "#ddff81",
+  // hue F
+  "#001d00", "#224100", "#466500", "#6b8a00", "#8fae06", "#b3d32a", "#d8f74f", "#fcff73",
 ];
 
-export function colorHex(index) {
-  return C64_HEX[index & 15] || C64_HEX[0];
+export function a8Hex(byte) {
+  const b = byte & 0xfe;
+  return A8_HEX[((b >> 4) << 3) | ((b & 15) >> 1)];
 }
 
-/** Normalize JSON colour (0–15) to a C64 index. */
-export function normalizeColor(value, fallback = 0) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(0, Math.min(15, value | 0));
+/** What the DLI draws as ink for this paper: same hue, luminance $0e. */
+export function a8InkHex(byte) {
+  return a8Hex((byte & 0xf0) | 0x0e);
+}
+
+/** Black and white papers are not allowed: black gutters / ink == paper. */
+export function normalizeBg(value, fallback = ROOM_BG_DEFAULT) {
+  const n = Number(value);
+  if (value == null || !Number.isFinite(n)) return fallback;
+  const b = Math.max(0, Math.min(255, n | 0)) & 0xfe;
+  if ((b & 0xf0) === 0) {
+    if (b < 0x04) return ROOM_BG_GREY_DARK;
+    if (b >= 0x0e) return ROOM_BG_GREY_LIGHT;
   }
-  const asNum = Number(value);
-  if (Number.isFinite(asNum)) return Math.max(0, Math.min(15, asNum | 0));
+  return b;
+}
+
+/** Room object -> A8 background byte. Legacy bgColor/skyColor are C64 indices 0-15. */
+export function roomBgFromJson(o, fallback = ROOM_BG_DEFAULT) {
+  if (o == null) return fallback;
+  if (o.a8Bg != null) return normalizeBg(o.a8Bg, fallback);
+  const legacy = o.bgColor ?? o.skyColor;
+  if (legacy != null) {
+    const i = Number(legacy);
+    if (Number.isFinite(i)) return ROOM_BG_SLOTS[Math.max(0, Math.min(15, i | 0))].byte;
+  }
   return fallback;
 }
 
@@ -2045,10 +2083,11 @@ export function clampObject(obj) {
   }
   if (obj.kind === "room") {
     obj.name = clampName(obj.name);
-    obj.bgColor = normalizeColor(obj.bgColor ?? obj.skyColor, ROOM_BG_DEFAULT);
-    obj.lineColor = normalizeColor(obj.lineColor, ROOM_LINE_DEFAULT);
-    obj.fxColor = normalizeColor(obj.fxColor, ROOM_FX_DEFAULT);
-    obj.weaponColor = normalizeColor(obj.weaponColor, ROOM_WPN_DEFAULT);
+    obj.a8Bg = roomBgFromJson(obj);
+    delete obj.bgColor;
+    delete obj.lineColor;
+    delete obj.fxColor;
+    delete obj.weaponColor;
     delete obj.skyColor;
     delete obj.floorColor;
     clampRoomSplits(obj);
@@ -2124,10 +2163,7 @@ export function createObject(kind, x, y, z, extra = {}) {
   }
   if (kind === "room") {
     obj.name = clampName(extra.name);
-    obj.bgColor = normalizeColor(extra.bgColor ?? extra.skyColor, ROOM_BG_DEFAULT);
-    obj.lineColor = normalizeColor(extra.lineColor, ROOM_LINE_DEFAULT);
-    obj.fxColor = normalizeColor(extra.fxColor, ROOM_FX_DEFAULT);
-    obj.weaponColor = normalizeColor(extra.weaponColor, ROOM_WPN_DEFAULT);
+    obj.a8Bg = roomBgFromJson(extra);
     obj.shape = clampRoomShape(extra.shape);
     obj.rx = extra.rx | 0;
     obj.ry = extra.ry | 0;
@@ -2702,7 +2738,7 @@ export function canAddEnemyType(map, typeName, roomId) {
  * Trigger text blob is counted separately. Spawn lives in the 24-byte header.
  */
 export const C64_OBJECT_BYTES = {
-  room: 11,
+  room: 7, // x y z sx sy sz bg
   doorway: 11, // one baked instance; +11 if otherRoomId (see mapStats)
   crate: 8,
   slope: 11,
@@ -3450,11 +3486,9 @@ function parseObjects(list) {
       order: o.order,
       collide: o.collide,
       enabled: o.enabled,
-      bgColor: o.bgColor ?? o.skyColor,
+      a8Bg: o.a8Bg,
+      bgColor: o.bgColor,
       skyColor: o.skyColor,
-      lineColor: o.lineColor,
-      fxColor: o.fxColor,
-      weaponColor: o.weaponColor,
       shape: o.shape,
       rx: o.rx,
       ry: o.ry,
@@ -3488,11 +3522,11 @@ function parseObjects(list) {
     }
     if (o.kind === "room") {
       if (o.name != null) obj.name = clampName(o.name);
-      const bg = o.bgColor ?? o.skyColor;
-      if (bg != null) obj.bgColor = normalizeColor(bg, ROOM_BG_DEFAULT);
-      if (o.lineColor != null) obj.lineColor = normalizeColor(o.lineColor, ROOM_LINE_DEFAULT);
-      if (o.fxColor != null) obj.fxColor = normalizeColor(o.fxColor, ROOM_FX_DEFAULT);
-      if (o.weaponColor != null) obj.weaponColor = normalizeColor(o.weaponColor, ROOM_WPN_DEFAULT);
+      if (o.a8Bg != null || o.bgColor != null || o.skyColor != null) obj.a8Bg = roomBgFromJson(o);
+      delete obj.bgColor;
+      delete obj.lineColor;
+      delete obj.fxColor;
+      delete obj.weaponColor;
       if (o.shape != null) obj.shape = clampRoomShape(o.shape);
       if (o.rx != null) obj.rx = o.rx | 0;
       if (o.ry != null) obj.ry = o.ry | 0;

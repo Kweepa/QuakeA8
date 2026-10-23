@@ -846,13 +846,33 @@ draw_grenades
 	jsr load_view_trig
 	ldx obj_i
 .dgr_go
+	lda gr_flags,x
+	and #GREN_F_LAVA
+	bne .dgr_red
 	jsr gren_draw_one
+	jmp .dgr_ld
+.dgr_red
+	jsr gren_red_draw
+.dgr_ld
 	ldx obj_i
 .dgr_n
 	inx
 	bne .dgr
 .dgr_rts
 	rts
+
+; Lava: Chthon bank patches the line bodies to eor (red on paper), then restores.
+; No-op when no Chthon bank is bound (ai_invoke skips a zero entry).
+gren_red_draw
+	stx obj_i
+	lda #AI_CMD_RED_ON
+	jsr .grd_ai
+	ldx obj_i
+	jsr gren_draw_one
+	lda #AI_CMD_RED_OFF
+.grd_ai
+	ldy #ENT_CHTHON
+	jmp ai_invoke
 
 ; One projected centre, then a screen triangle of half-extent GREN_R.
 ; Edges are clipped; off-screen corners are not pulled onto the border.

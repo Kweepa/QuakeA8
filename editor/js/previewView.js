@@ -1,14 +1,13 @@
 import {
   ROOM_BG_DEFAULT,
-  ROOM_LINE_DEFAULT,
-  ROOM_WPN_DEFAULT,
   WORLD_MIN,
   WORLD_MAX,
   activeMap,
   clampDoorScale,
   clampEnemyRot,
   clampSlopeFlags,
-  colorHex,
+  a8Hex,
+  a8InkHex,
   enemyPlacementWorldVerts,
   findEnemyTemplate,
   figureTemplateName,
@@ -25,7 +24,7 @@ import {
 } from "./model.js";
 import { BOX_EDGES, cornerWorld, NEAR, worldToCamera } from "./math3d.js";
 
-/** Game unique-char viewport (24×16 chars). */
+/** Game unique-char viewport (24Ã—16 chars). */
 const GAME_VIEW_W = 192;
 const GAME_VIEW_H = 128;
 const GAME_FOCAL = 100;
@@ -46,7 +45,7 @@ const NAIL_H = 42;
 const NAIL_VX = 72;
 const NAIL_VY = 92;
 
-/** FACE_PZ/MZ/PX/MX → yaw so local +Z points out of the door face (door_face_rot). */
+/** FACE_PZ/MZ/PX/MX â†’ yaw so local +Z points out of the door face (door_face_rot). */
 const PV_DOOR_YAW = {
   "+z": 0,
   "-z": Math.PI,
@@ -465,7 +464,7 @@ export class PreviewView {
   }
 
   #drawNail(ctx, room) {
-    const hex = colorHex(room.weaponColor ?? ROOM_WPN_DEFAULT);
+    const hex = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
     const tint = this.#nailTint(hex);
     if (!tint) return;
     const dx = NAIL_VX * PREVIEW_SX;
@@ -499,10 +498,10 @@ export class PreviewView {
 
   hint() {
     const room = this.opts.getRoom?.();
-    if (this.#editSpawn()) return "Spawn view — drag L/R to set angle · U/D to move";
-    if (this.stickyCam) return "Drag L/R to rotate · U/D to walk";
+    if (this.#editSpawn()) return "Spawn view â€” drag L/R to set angle Â· U/D to move";
+    if (this.stickyCam) return "Drag L/R to rotate Â· U/D to walk";
     if (this.opts.getSpawn?.()) return "Spawn view";
-    if (room) return "Drag L/R to rotate · U/D to walk";
+    if (room) return "Drag L/R to rotate Â· U/D to walk";
     return "Select a room";
   }
 
@@ -514,12 +513,12 @@ export class PreviewView {
     this.#forgetSticky(room);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     pvDisableSmoothing(ctx);
-    ctx.fillStyle = room ? colorHex(room.bgColor ?? ROOM_BG_DEFAULT) : "#000000";
+    ctx.fillStyle = room ? a8Hex(room.a8Bg ?? ROOM_BG_DEFAULT) : "#000000";
     ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
 
     if (doc && room) {
       const cam = this.#cam(room, spawn);
-      const line = colorHex(room.lineColor ?? ROOM_LINE_DEFAULT);
+      const line = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
       const g = roomGeometry(room);
       for (const e of g.edges) {
         this.#stroke(ctx, cam, g.verts[e.a], g.verts[e.b], line);

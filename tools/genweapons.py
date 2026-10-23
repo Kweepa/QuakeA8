@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Pack cleaned view-model PNGs → src/weapon_spr.asm (+ optional contact sheet).
+"""Pack view-model PNGs → mode-E mask/image rows in src/weapon_spr.asm.
 
-Occupancy is measured on the 48×42 `*_N_edit.png` files (not packed asm).
-
-    axe   TL (14,0)  BL (13,21)  mid-right (24,8)     → 3 cells
-    shot  stacked 24-wide at x=13 (edit ink 13..36)   → 2 cells
-    gren  top-mid (12,0) BL (0,21) BR (24,21)         → 3 cells
-    nail  full 2×2 on frames 0,1,2                    → 4 cells each
-
-Flashes are occupancy-masked (8-byte mask + nonzero bytes).
+Each body cell and flash is baked at its real x, including the phase inside
+the byte. Two hires bits become one colour-clock pixel. Bodies store the
+inverted plane (ink %00, clear %11) and are ANDed on, so the gun is black.
+Flashes store ink %11 / clear %00 and are ORed on (line colour).
 
     python tools/genweapons.py
 """
@@ -47,11 +43,13 @@ SHEET = PNG_DIR / "sheet.png"
 AXE_KEY = "axe"
 EDIT_RE = re.compile(r"^([a-z0-9]+)_(\d+)_edit\.png$", re.I)
 
+# label, png, viewport-relative hires x (VIC x − 88), dy added to weapon y.
+# Same signed offset as wpn_flashdy / place_flash: −FLASH_DY, −FLASH_DY_GUN, FLASH_DY_NAIL.
 FLASHES = [
-    ("muzzle_flash.png", "spr_muzzle"),
-    ("axe_flash.png", "spr_spark"),
-    ("nail_flash_left.png", "spr_nail_fl"),
-    ("nail_flash_right.png", "spr_nail_fr"),
+    ("spr_muzzle_b", "muzzle_flash.png", 172 - 88, -20),
+    ("spr_spark_b", "axe_flash.png", 172 - 88, -10),
+    ("spr_nail_fl_b", "nail_flash_left.png", 160 - 88, -15),
+    ("spr_nail_fr_b", "nail_flash_right.png", 184 - 88, -15),
 ]
 
 # Weapon order in tables: axe, shot, nail, gren
@@ -136,17 +134,11 @@ def cut_cells(key: str, pix: list[list[int]]) -> list[list[int]]:
     return [pack_window(pix, ox, oy) for ox, oy in windows]
 
 
-def flash_raw(png_name: str, label: str) -> list[int]:
+def flash_pix(png_name: str) -> list[list[int]]:
     path = PNG_DIR / png_name
-    if path.is_file():
-        return pack_24x21(load_png_1bit(path, 24, 21))
-    if OUT.is_file():
-        raw = parse_label_bytes(OUT, label)
-        head = OUT.read_text(encoding="utf-8")[:500]
-        if "zeromask" in head:
-            return unpack_zeromask(raw)
-        return list(raw[:CELL])
-    raise SystemExit(f"missing {path} and {OUT}")
+    if not path.is_file():
+        raise SystemExit(f"missing {path}")
+    return load_png_1bit(path, 24, 21)
 
 
 def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]]]]]) -> None:
@@ -190,11 +182,66 @@ def write_sheet(rows: list[list[tuple[str, list[list[int]], list[tuple[int, int]
     print(f"Wrote {SHEET.relative_to(ROOT)}")
 
 
-def emit_cells(label: str, cells: list[list[int]]) -> list[str]:
-    flat: list[int] = []
-    for c in cells:
-        flat.extend(c)
-    return [label, bchunk(flat).rstrip(), ""]
+def bake_sprite(get_ink, ox: int, oy_store: int, *, black: bool = False) -> list[int]:
+    """24×21 sprite whose left edge is hires column ox. oy_store is the signed dy.
+
+    black: store the inverted plane (ink %00, clear %11) for an AND blit.
+    Otherwise store ink %11, clear %00 for an ORA blit.
+    """
+    fat0 = ox >> 1
+    fat1 = (ox + 23) >> 1
+    b0 = fat0 >> 2
+    b1 = fat1 >> 2
+    width = b1 - b0 + 1
+    plane: list[int] = []
+    for ry in range(21):
+        mask = [0xFF] * width
+        image = [0] * width
+        for px in range(24):
+            if not get_ink(px, ry):
+                continue
+            fat = (ox + px) >> 1
+            bi = (fat >> 2) - b0
+            pair = 3 << ((3 - (fat & 3)) * 2)
+            mask[bi] = (mask[bi] & ~pair) & 0xFF
+            image[bi] = (image[bi] | pair) & 0xFF
+        for m, im in zip(mask, image):
+            if (m ^ im) != 0xFF or (m & im) != 0:
+                raise SystemExit(f"bake phase broken at x={ox} row {ry}: {m:02x} {im:02x}")
+        plane.extend(mask if black else image)
+    yb = oy_store & 0xFF
+    return [b0 & 0xFF, yb, width, 21, *plane]
+
+
+def bake_windows(pix: list[list[int]], windows: list[tuple[int, int]]) -> list[int]:
+    out = [len(windows)]
+
+    def cell(ox: int, oy: int) -> list[int]:
+        def get_ink(px: int, ry: int) -> int:
+            x = ox + px
+            y = oy + ry
+            if 0 <= x < W and 0 <= y < H:
+                return pix[y][x]
+            return 0
+
+        return bake_sprite(get_ink, ox, oy, black=True)
+
+    for ox, oy in windows:
+        out.extend(cell(ox, oy))
+    return out
+
+
+def bake_flash(pix: list[list[int]], ox: int, dy: int) -> list[int]:
+    def get_ink(px: int, ry: int) -> int:
+        if 0 <= px < 24 and 0 <= ry < 21:
+            return pix[ry][px]
+        return 0
+
+    return [1, *bake_sprite(get_ink, ox, dy)]
+
+
+def emit_bytes(label: str, data: list[int]) -> list[str]:
+    return [label, bchunk(data).rstrip(), ""]
 
 
 def main() -> None:
@@ -212,68 +259,57 @@ def main() -> None:
     rock_pix = load_pix("rock", rock_frames[0], "spr_rock")
     axe_pix = load_pix("axe", axe_frames[0], "spr_axe_0")
     nail_pix = [load_pix("nail", f, f"spr_nail_{f}") for f in nail_frames]
+    if len(nail_pix) != 3:
+        raise SystemExit(f"nail needs 3 frames, got {len(nail_pix)}")
 
     shot = cut_cells("shot2", shot_pix)
     rock = cut_cells("rock", rock_pix)
     axe = cut_cells("axe", axe_pix)
     nail = [cut_cells("nail", pix) for pix in nail_pix]
 
-    flashes = [(label, pack_zeromask(flash_raw(png, label))) for png, label in FLASHES]
-
-    # Tables: weapon order axe, shot, nail, gren. 4 slots; unused dx/dy = 0.
-    def pad4(windows: list[tuple[int, int]]) -> list[tuple[int, int]]:
-        w = list(windows) + [(0, 0)] * (4 - len(windows))
-        return w[:4]
-
-    axe_w, shot_w, nail_w, rock_w = (pad4(WINDOWS[k]) for k in ("axe", "shot2", "nail", "rock"))
-    dx = [p[0] for w in (axe_w, shot_w, nail_w, rock_w) for p in w]
-    dy = [p[1] for w in (axe_w, shot_w, nail_w, rock_w) for p in w]
-    en = [
-        (1 << len(WINDOWS["axe"])) - 1,
-        (1 << len(WINDOWS["shot2"])) - 1,
-        (1 << len(WINDOWS["nail"])) - 1,
-        (1 << len(WINDOWS["rock"])) - 1,
+    # The blit uses the baked x_byte / y, phase included.
+    axe_b = bake_windows(axe_pix, WINDOWS["axe"])
+    shot_b = bake_windows(shot_pix, WINDOWS["shot2"])
+    rock_b = bake_windows(rock_pix, WINDOWS["rock"])
+    nail_b = [bake_windows(pix, WINDOWS["nail"]) for pix in nail_pix]
+    flashes = [
+        (label, bake_flash(flash_pix(png), ox, dy))
+        for label, png, ox, dy in FLASHES
     ]
-    nbytes = [len(WINDOWS[k]) * CELL % 256 for k in ("axe", "shot2", "nail", "rock")]
-    # 256 cells → 0 so blit_n cpx #0 wraps after 256 copies
 
     parts = [
         "; Generated by tools/genweapons.py from assets/weapons — do not edit",
-        "; Body cells are 24x21 occupancy windows (see wpn_dx / wpn_dy).",
-        "; Flashes: zeromask (8-byte occupancy + nonzero bytes).",
+        "; Mode-E cells: count, then x_byte, y, width, height, plane.",
+        "; Bodies are inverted (ink %00, clear %11) and the blit is AND, so the gun is black.",
+        "; Flashes are ink %11 / clear %00. Phase 1 ORs line colour; phase 2 writes %10.",
         "",
-        "; Slot dx/dy and enable: weapon order axe, shot, nail, gren (4 slots).",
-        "wpn_dx",
-        bchunk(dx).rstrip(),
-        "wpn_dy",
-        bchunk(dy).rstrip(),
-        "wpn_body_en",
-        bchunk(en).rstrip(),
-        "wpn_body_n",
-        bchunk(nbytes).rstrip(),
+        "; Frame pointers: axe, shot, nail0, nail1, nail2, rock.",
+        "wpn_fr_lo",
+        "\t!byte <spr_axe_b, <spr_shot_b, <spr_nail_b0, <spr_nail_b1, <spr_nail_b2, <spr_rock_b",
+        "wpn_fr_hi",
+        "\t!byte >spr_axe_b, >spr_shot_b, >spr_nail_b0, >spr_nail_b1, >spr_nail_b2, >spr_rock_b",
+        "wpn_fr_base",
+        "\t!byte 0, 1, 2, 5",
+        "wpn_fl4_lo",
+        "\t!byte <spr_spark_b, <spr_muzzle_b, <spr_nail_fl_b, <spr_muzzle_b",
+        "wpn_fl4_hi",
+        "\t!byte >spr_spark_b, >spr_muzzle_b, >spr_nail_fl_b, >spr_muzzle_b",
         "",
     ]
-    parts += emit_cells("spr_shot2", shot)
-    parts += [
-        "spr_nail",
-    ]
-    for i, cells in enumerate(nail):
-        parts += emit_cells(f"spr_nail_{i}", cells)
-    parts += emit_cells("spr_rock", rock)
-    parts += [
-        "spr_axe",
-    ]
-    parts += emit_cells("spr_axe_0", axe)
+    parts += emit_bytes("spr_axe_b", axe_b)
+    parts += emit_bytes("spr_shot_b", shot_b)
+    parts += emit_bytes("spr_rock_b", rock_b)
+    for i, data in enumerate(nail_b):
+        parts += emit_bytes(f"spr_nail_b{i}", data)
     for label, data in flashes:
-        parts += [label, bchunk(data).rstrip(), ""]
+        parts += emit_bytes(label, data)
 
     OUT.write_text("\n".join(parts) + "\n", encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)}")
-    for k, cells in (("axe", axe), ("shot2", shot), ("rock", rock)):
-        print(f"  {k}: {len(cells)} cells ({len(cells) * CELL} bytes)")
-    print(f"  nail: {len(nail)} frames × {len(nail[0]) if nail else 0} cells")
+    print(f"  axe {len(axe_b)}B  shot {len(shot_b)}B  rock {len(rock_b)}B")
+    print(f"  nail: {len(nail_b)} frames, {len(nail_b[0]) if nail_b else 0}B")
     for label, data in flashes:
-        print(f"  {label}: {len(data)} packed")
+        print(f"  {label}: {len(data)}B")
 
     write_sheet(
         [

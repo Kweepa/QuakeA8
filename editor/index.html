@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quake64 Editor</title>
+  <title>QuakeA8 Editor</title>
   <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAMAAADz0U65AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAMUExURQAAALfGbplmWRIUGijcP7UAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCA1LjEuMTITAUd0AAAAuGVYSWZJSSoACAAAAAUAGgEFAAEAAABKAAAAGwEFAAEAAABSAAAAKAEDAAEAAAACAAAAMQECABEAAABaAAAAaYcEAAEAAABsAAAAAAAAAGAAAAABAAAAYAAAAAEAAABQYWludC5ORVQgNS4xLjEyAAADAACQBwAEAAAAMDIzMAGgAwABAAAAAQAAAAWgBAABAAAAlgAAAAAAAAACAAEAAgAEAAAAUjk4AAIABwAEAAAAMDEwMAAAAADZp5qVybcLXwAAAChJREFUGFc9iEEOADAMgsD+/8+La7YDioKwmMaXFN9SEyDmNvSHGagcB10AN8kKiGEAAAAASUVORK5CYII=" />
   <style>
 :root {
@@ -824,46 +824,6 @@ button:disabled {
   width: 100%;
 }
 
-.room-color-channels {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-}
-
-.room-color-channel {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 2rem;
-  padding: 0 0 2px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  color: #fff;
-  text-shadow: 0 0 2px #000, 0 1px 2px #000;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-.room-color-channel.active {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
-  border-color: #fff;
-}
-
-.room-color-channel.mixed {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--bg),
-    var(--bg) 3px,
-    var(--panel) 3px,
-    var(--panel) 6px
-  );
-  color: var(--muted);
-  text-shadow: none;
-}
-
 .color-swatches {
   display: flex;
   flex-wrap: nowrap;
@@ -1233,8 +1193,13 @@ button:disabled {
 
 .build-cols {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
+  align-items: start;
+}
+
+.build-cols > .build-section {
+  min-width: 0;
 }
 
 .build-mod {
@@ -1438,7 +1403,7 @@ button:disabled {
 </head>
 <body>
   <header class="toolbar">
-    <h1>Quake64</h1>
+    <h1>QuakeA8</h1>
     <div class="toolbar-actions" role="group" aria-label="Editor mode">
       <button type="button" id="btn-mode-layout" class="active">Maps</button>
       <button type="button" id="btn-mode-anim">Enemies</button>
@@ -3532,66 +3497,104 @@ function clampEnemyLodZ(n, name) {
   return Math.max(0, Math.min(255, v | 0));
 }
 
-/** Default room viewport colours (C64 indices). */
-const ROOM_BG_DEFAULT = 9;
-const ROOM_LINE_DEFAULT = 7;
-const ROOM_FX_DEFAULT = 1;
-const ROOM_WPN_DEFAULT = 0;
-/** @deprecated Use ROOM_BG_DEFAULT */
-const ROOM_SKY_DEFAULT = ROOM_BG_DEFAULT;
-/** @deprecated */
-const ROOM_FLOOR_DEFAULT = ROOM_BG_DEFAULT;
+/**
+ * Room colour is one Atari byte: hue in the high nibble, luminance in the low
+ * nibble (bit 0 unused). The game feeds it straight to COLPF0 (paper); ink is
+ * the same hue at luminance $0e. No other per-room colours exist.
+ */
+const ROOM_BG_GREY_DARK = 0x04;
+const ROOM_BG_GREY_LIGHT = 0x0a;
 
-/** Pepto Commodore 64 palette (indices 0–15). */
-const C64_HEX = [
-  "#000000",
-  "#ffffff",
-  "#813338",
-  "#75cec8",
-  "#8e3c97",
-  "#56ac4d",
-  "#40318d",
-  "#bfce72",
-  "#8e5029",
-  "#553f00",
-  "#c46c71",
-  "#4a4a4a",
-  "#7b7b7b",
-  "#a9ff9f",
-  "#706deb",
-  "#b2b2b2",
+/** Picker slots. Slot i is also what legacy C64 bgColor i converts to. */
+const ROOM_BG_SLOTS = [
+  { name: "dark grey (was black)", byte: ROOM_BG_GREY_DARK },
+  { name: "light grey (was white)", byte: ROOM_BG_GREY_LIGHT },
+  { name: "red", byte: 0x42 },
+  { name: "cyan", byte: 0xa6 },
+  { name: "purple", byte: 0x64 },
+  { name: "green", byte: 0xc4 },
+  { name: "blue", byte: 0x84 },
+  { name: "yellow", byte: 0x1c },
+  { name: "orange", byte: 0x26 },
+  { name: "brown", byte: 0x24 },
+  { name: "light red", byte: 0x4a },
+  { name: "dark grey", byte: 0x06 },
+  { name: "grey", byte: 0x08 },
+  { name: "light green", byte: 0xca },
+  { name: "light blue", byte: 0x9a },
+  { name: "light grey", byte: 0x0c },
 ];
 
-const C64_NAMES = [
-  "black",
-  "white",
-  "red",
-  "cyan",
-  "purple",
-  "green",
-  "blue",
-  "yellow",
-  "orange",
-  "brown",
-  "light red",
-  "dark grey",
-  "grey",
-  "light green",
-  "light blue",
-  "light grey",
+/** Default room background (A8 byte; the old brown). */
+const ROOM_BG_DEFAULT = 0x24;
+
+/** A8 RGB, [hue * 8 + (lum >> 1)]. Approximate NTSC GTIA, preview only. */
+const A8_HEX = [
+  // hue 0
+  "#000000", "#242424", "#494949", "#6d6d6d", "#929292", "#b6b6b6", "#dbdbdb", "#ffffff",
+  // hue 1
+  "#1d0a00", "#422f00", "#665300", "#8b7700", "#af9c10", "#d4c035", "#f8e559", "#ffff7d",
+  // hue 2
+  "#380000", "#5d1b00", "#813f00", "#a6630c", "#ca8831", "#efac55", "#ffd179", "#fff59e",
+  // hue 3
+  "#4a0000", "#6e0800", "#932d19", "#b7513d", "#db7562", "#ff9a86", "#ffbeab", "#ffe3cf",
+  // hue 4
+  "#4e000a", "#73002e", "#971f53", "#bc4477", "#e0689b", "#ff8cc0", "#ffb1e4", "#ffd5ff",
+  // hue 5
+  "#450042", "#6a0066", "#8e198a", "#b33daf", "#d762d3", "#fb86f8", "#ffabff", "#ffcfff",
+  // hue 6
+  "#30006e", "#550093", "#791bb7", "#9e3fdb", "#c264ff", "#e688ff", "#ffadff", "#ffd1ff",
+  // hue 7
+  "#130088", "#3700ac", "#5c25d1", "#8049f5", "#a56eff", "#c992ff", "#eeb7ff", "#ffdbff",
+  // hue 8
+  "#00008a", "#1711ae", "#3b35d3", "#6059f7", "#847eff", "#a9a2ff", "#cdc7ff", "#f1ebff",
+  // hue 9
+  "#000074", "#002498", "#1d49bd", "#416de1", "#6692ff", "#8ab6ff", "#afdaff", "#d3ffff",
+  // hue A
+  "#00144a", "#00386f", "#065c93", "#2b81b7", "#4fa5dc", "#74caff", "#98eeff", "#bcffff",
+  // hue B
+  "#002413", "#004838", "#006d5c", "#209181", "#44b6a5", "#68daca", "#8dfeee", "#b1ffff",
+  // hue C
+  "#002e00", "#005200", "#007722", "#229b47", "#46c06b", "#6be490", "#8fffb4", "#b4ffd8",
+  // hue D
+  "#003000", "#005500", "#0d7900", "#319d13", "#56c238", "#7ae65c", "#9eff81", "#c3ffa5",
+  // hue E
+  "#002a00", "#024e00", "#267300", "#4b9700", "#6fbc14", "#94e038", "#b8ff5d", "#ddff81",
+  // hue F
+  "#001d00", "#224100", "#466500", "#6b8a00", "#8fae06", "#b3d32a", "#d8f74f", "#fcff73",
 ];
 
-function colorHex(index) {
-  return C64_HEX[index & 15] || C64_HEX[0];
+function a8Hex(byte) {
+  const b = byte & 0xfe;
+  return A8_HEX[((b >> 4) << 3) | ((b & 15) >> 1)];
 }
 
-/** Normalize JSON colour (0–15) to a C64 index. */
-function normalizeColor(value, fallback = 0) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(0, Math.min(15, value | 0));
+/** What the DLI draws as ink for this paper: same hue, luminance $0e. */
+function a8InkHex(byte) {
+  return a8Hex((byte & 0xf0) | 0x0e);
+}
+
+/** Black and white papers are not allowed: black gutters / ink == paper. */
+function normalizeBg(value, fallback = ROOM_BG_DEFAULT) {
+  const n = Number(value);
+  if (value == null || !Number.isFinite(n)) return fallback;
+  const b = Math.max(0, Math.min(255, n | 0)) & 0xfe;
+  if ((b & 0xf0) === 0) {
+    if (b < 0x04) return ROOM_BG_GREY_DARK;
+    if (b >= 0x0e) return ROOM_BG_GREY_LIGHT;
   }
-  const asNum = Number(value);
-  if (Number.isFinite(asNum)) return Math.max(0, Math.min(15, asNum | 0));
+  return b;
+}
+
+/** Room object -> A8 background byte. Legacy bgColor/skyColor are C64 indices 0-15. */
+function roomBgFromJson(o, fallback = ROOM_BG_DEFAULT) {
+  if (o == null) return fallback;
+  if (o.a8Bg != null) return normalizeBg(o.a8Bg, fallback);
+  const legacy = o.bgColor ?? o.skyColor;
+  if (legacy != null) {
+    const i = Number(legacy);
+    if (Number.isFinite(i)) return ROOM_BG_SLOTS[Math.max(0, Math.min(15, i | 0))].byte;
+  }
   return fallback;
 }
 
@@ -5089,10 +5092,11 @@ function clampObject(obj) {
   }
   if (obj.kind === "room") {
     obj.name = clampName(obj.name);
-    obj.bgColor = normalizeColor(obj.bgColor ?? obj.skyColor, ROOM_BG_DEFAULT);
-    obj.lineColor = normalizeColor(obj.lineColor, ROOM_LINE_DEFAULT);
-    obj.fxColor = normalizeColor(obj.fxColor, ROOM_FX_DEFAULT);
-    obj.weaponColor = normalizeColor(obj.weaponColor, ROOM_WPN_DEFAULT);
+    obj.a8Bg = roomBgFromJson(obj);
+    delete obj.bgColor;
+    delete obj.lineColor;
+    delete obj.fxColor;
+    delete obj.weaponColor;
     delete obj.skyColor;
     delete obj.floorColor;
     clampRoomSplits(obj);
@@ -5168,10 +5172,7 @@ function createObject(kind, x, y, z, extra = {}) {
   }
   if (kind === "room") {
     obj.name = clampName(extra.name);
-    obj.bgColor = normalizeColor(extra.bgColor ?? extra.skyColor, ROOM_BG_DEFAULT);
-    obj.lineColor = normalizeColor(extra.lineColor, ROOM_LINE_DEFAULT);
-    obj.fxColor = normalizeColor(extra.fxColor, ROOM_FX_DEFAULT);
-    obj.weaponColor = normalizeColor(extra.weaponColor, ROOM_WPN_DEFAULT);
+    obj.a8Bg = roomBgFromJson(extra);
     obj.shape = clampRoomShape(extra.shape);
     obj.rx = extra.rx | 0;
     obj.ry = extra.ry | 0;
@@ -5746,7 +5747,7 @@ function canAddEnemyType(map, typeName, roomId) {
  * Trigger text blob is counted separately. Spawn lives in the 24-byte header.
  */
 const C64_OBJECT_BYTES = {
-  room: 11,
+  room: 7, // x y z sx sy sz bg
   doorway: 11, // one baked instance; +11 if otherRoomId (see mapStats)
   crate: 8,
   slope: 11,
@@ -6494,11 +6495,9 @@ function parseObjects(list) {
       order: o.order,
       collide: o.collide,
       enabled: o.enabled,
-      bgColor: o.bgColor ?? o.skyColor,
+      a8Bg: o.a8Bg,
+      bgColor: o.bgColor,
       skyColor: o.skyColor,
-      lineColor: o.lineColor,
-      fxColor: o.fxColor,
-      weaponColor: o.weaponColor,
       shape: o.shape,
       rx: o.rx,
       ry: o.ry,
@@ -6532,11 +6531,11 @@ function parseObjects(list) {
     }
     if (o.kind === "room") {
       if (o.name != null) obj.name = clampName(o.name);
-      const bg = o.bgColor ?? o.skyColor;
-      if (bg != null) obj.bgColor = normalizeColor(bg, ROOM_BG_DEFAULT);
-      if (o.lineColor != null) obj.lineColor = normalizeColor(o.lineColor, ROOM_LINE_DEFAULT);
-      if (o.fxColor != null) obj.fxColor = normalizeColor(o.fxColor, ROOM_FX_DEFAULT);
-      if (o.weaponColor != null) obj.weaponColor = normalizeColor(o.weaponColor, ROOM_WPN_DEFAULT);
+      if (o.a8Bg != null || o.bgColor != null || o.skyColor != null) obj.a8Bg = roomBgFromJson(o);
+      delete obj.bgColor;
+      delete obj.lineColor;
+      delete obj.fxColor;
+      delete obj.weaponColor;
       if (o.shape != null) obj.shape = clampRoomShape(o.shape);
       if (o.rx != null) obj.rx = o.rx | 0;
       if (o.ry != null) obj.ry = o.ry | 0;
@@ -7583,7 +7582,7 @@ async function autosaveDocJSON(doc) {
 }
 
 const JSON_TYPE = {
-  description: "Quake64 Editor",
+  description: "QuakeA8 Editor",
   accept: { "application/json": [".json"] },
 };
 
@@ -10352,7 +10351,7 @@ class LayoutView {
     }
     if (!faces.length) return;
     faces.sort((a, b) => b.z - a.z);
-    ctx.fillStyle = hexAlpha(colorHex(obj.bgColor ?? ROOM_BG_DEFAULT), 0.4);
+    ctx.fillStyle = hexAlpha(a8Hex(obj.a8Bg ?? ROOM_BG_DEFAULT), 0.4);
     for (const face of faces) {
       ctx.beginPath();
       ctx.moveTo(face.pts[0].sx, face.pts[0].sy);
@@ -10400,7 +10399,7 @@ class LayoutView {
     const color = highlight
       ? "#f2d36b"
       : obj.kind === "room"
-        ? colorHex(obj.lineColor ?? ROOM_LINE_DEFAULT)
+        ? a8InkHex(obj.a8Bg ?? ROOM_BG_DEFAULT)
         : obj.kind === "spawn" && !obj.enabled
           ? "#1a7a3c"
           : KINDS[obj.kind].color;
@@ -10715,8 +10714,8 @@ class OverheadView {
       const isCur = cur && obj.id === cur.id;
       const isN = neigh.some((n) => n.id === obj.id);
       const faded = vis && !vis.has(obj.id);
-      const bgHex = colorHex(obj.bgColor ?? ROOM_BG_DEFAULT);
-      const lineHex = colorHex(obj.lineColor ?? ROOM_LINE_DEFAULT);
+      const bgHex = a8Hex(obj.a8Bg ?? ROOM_BG_DEFAULT);
+      const lineHex = a8InkHex(obj.a8Bg ?? ROOM_BG_DEFAULT);
       const fill = isCur
         ? hexAlpha(bgHex, 0.28)
         : isN
@@ -10751,7 +10750,7 @@ class OverheadView {
 
 
 // ---- js/previewView.js ----
-/** Game unique-char viewport (24×16 chars). */
+/** Game unique-char viewport (24Ã—16 chars). */
 const GAME_VIEW_W = 192;
 const GAME_VIEW_H = 128;
 const GAME_FOCAL = 100;
@@ -10772,7 +10771,7 @@ const NAIL_H = 42;
 const NAIL_VX = 72;
 const NAIL_VY = 92;
 
-/** FACE_PZ/MZ/PX/MX → yaw so local +Z points out of the door face (door_face_rot). */
+/** FACE_PZ/MZ/PX/MX â†’ yaw so local +Z points out of the door face (door_face_rot). */
 const PV_DOOR_YAW = {
   "+z": 0,
   "-z": Math.PI,
@@ -11191,7 +11190,7 @@ class PreviewView {
   }
 
   #drawNail(ctx, room) {
-    const hex = colorHex(room.weaponColor ?? ROOM_WPN_DEFAULT);
+    const hex = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
     const tint = this.#nailTint(hex);
     if (!tint) return;
     const dx = NAIL_VX * PREVIEW_SX;
@@ -11225,10 +11224,10 @@ class PreviewView {
 
   hint() {
     const room = this.opts.getRoom?.();
-    if (this.#editSpawn()) return "Spawn view — drag L/R to set angle · U/D to move";
-    if (this.stickyCam) return "Drag L/R to rotate · U/D to walk";
+    if (this.#editSpawn()) return "Spawn view â€” drag L/R to set angle Â· U/D to move";
+    if (this.stickyCam) return "Drag L/R to rotate Â· U/D to walk";
     if (this.opts.getSpawn?.()) return "Spawn view";
-    if (room) return "Drag L/R to rotate · U/D to walk";
+    if (room) return "Drag L/R to rotate Â· U/D to walk";
     return "Select a room";
   }
 
@@ -11240,12 +11239,12 @@ class PreviewView {
     this.#forgetSticky(room);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     pvDisableSmoothing(ctx);
-    ctx.fillStyle = room ? colorHex(room.bgColor ?? ROOM_BG_DEFAULT) : "#000000";
+    ctx.fillStyle = room ? a8Hex(room.a8Bg ?? ROOM_BG_DEFAULT) : "#000000";
     ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
 
     if (doc && room) {
       const cam = this.#cam(room, spawn);
-      const line = colorHex(room.lineColor ?? ROOM_LINE_DEFAULT);
+      const line = a8InkHex(room.a8Bg ?? ROOM_BG_DEFAULT);
       const g = roomGeometry(room);
       for (const e of g.edges) {
         this.#stroke(ctx, cam, g.verts[e.a], g.verts[e.b], line);
@@ -13621,8 +13620,8 @@ class SoundView {
 
 // ---- js/buildView.js ----
 const REPORT_NAME = "build-report.json";
-const VARIANT_ORDER = ["kernal", "krill"];
-const VARIANT_LABEL = { kernal: "KERNAL", krill: "Krill" };
+const VARIANT_ORDER = ["a8"];
+const VARIANT_LABEL = { a8: "A8" };
 
 const panel = document.getElementById("build-panel");
 
@@ -13763,7 +13762,7 @@ function addCards(parent, data) {
   for (const name of Object.keys(disks)) {
     const disk = disks[name];
     if (!disk || disk.free == null) continue;
-    addCard(parent, name, `${disk.free} blocks free`, Number(disk.free) <= 0);
+    addCard(parent, name, `${disk.free} sectors free for ED/1050 disk`, Number(disk.free) <= 0);
   }
 }
 
@@ -13893,7 +13892,6 @@ function addLevels(parent, data) {
   const rows = levelRows(data);
   if (!rows.length) return;
   const splitSlack = fieldDiffers(data, "slack");
-  const splitNeed = fieldDiffers(data, "need");
   const section = el("section", "build-section");
   section.append(el("h2", null, "Levels"));
   const first = keys[0];
@@ -13906,19 +13904,14 @@ function addLevels(parent, data) {
   const head = el("tr");
   head.append(el("th", null, "Level"));
   head.append(el("th", "bar-cell", ""));
-  head.append(el("th", "num", "Map"));
-  head.append(el("th", null, "Worst"));
-  head.append(el("th", "num", "Assets"));
-  if (splitNeed) {
-    for (const key of keys) head.append(el("th", "num", `Need ${variantLabel(key)}`));
-  } else {
-    head.append(el("th", "num", "Need"));
-  }
   if (splitSlack) {
     for (const key of keys) head.append(el("th", "num", variantLabel(key)));
   } else {
     head.append(el("th", "num", "Slack"));
   }
+  head.append(el("th", null, "Worst"));
+  head.append(el("th", "num", "Map"));
+  head.append(el("th", "num", "Assets"));
   const thead = el("thead");
   thead.append(head);
   table.append(thead);
@@ -13940,17 +13933,6 @@ function addLevels(parent, data) {
       );
     }
     tr.append(barCell);
-    tr.append(numCell(base ? String(base.map_bytes) : ""));
-    tr.append(el("td", null, worstText(base)));
-    tr.append(numCell(base ? String(base.room_assets) : ""));
-    if (splitNeed) {
-      for (const key of keys) {
-        const lv = row.cells[key];
-        tr.append(numCell(lv ? String(lv.need) : ""));
-      }
-    } else {
-      tr.append(numCell(base ? String(base.need) : ""));
-    }
     if (splitSlack) {
       for (const key of keys) {
         const lv = row.cells[key];
@@ -13961,6 +13943,9 @@ function addLevels(parent, data) {
       const slack = base ? Number(base.slack) : NaN;
       tr.append(numCell(base ? slackText(slack) : "", Number.isFinite(slack) && slack <= 0));
     }
+    tr.append(el("td", null, worstText(base)));
+    tr.append(numCell(base ? String(base.map_bytes) : ""));
+    tr.append(numCell(base ? String(base.room_assets) : ""));
     body.append(tr);
   }
   table.append(body);
@@ -13969,15 +13954,16 @@ function addLevels(parent, data) {
 }
 
 function addAdvanced(parent, data) {
-  const kernal = data?.variants?.kernal;
-  if (!kernal || typeof kernal !== "object") return;
-  const modules = Array.isArray(kernal.modules) ? kernal.modules : [];
+  const keys = variantKeys(data);
+  const variant = keys.length ? data.variants[keys[0]] : null;
+  if (!variant || typeof variant !== "object") return;
+  const modules = Array.isArray(variant.modules) ? variant.modules : [];
   const section = el("section", "build-section build-advanced");
   section.append(el("h2", null, "Advanced"));
-  section.append(el("p", "build-empty", "KERNAL build, by size."));
+  section.append(el("p", "build-empty", "By size."));
   const hasSymbols = modules.some((mod) => Array.isArray(mod.symbols));
   if (!modules.length || !hasSymbols) {
-    section.append(el("p", "build-empty", "Rebuild to list KERNAL symbols."));
+    section.append(el("p", "build-empty", "Rebuild to list symbols."));
     parent.append(section);
     return;
   }
@@ -14028,15 +14014,14 @@ function addBanks(parent, data) {
   const head = el("tr");
   head.append(el("th", null, "Name"));
   head.append(el("th", "bar-cell", ""));
-  for (const label of ["Bank", "Code", "Pose", "Reloc", "Map"]) head.append(el("th", "num", label));
+  for (const label of ["Bank", "Code", "Pose"]) head.append(el("th", "num", label));
   const thead = el("thead");
   thead.append(head);
   table.append(thead);
+  const scale = banks.reduce((n, bank) => Math.max(n, Number(bank.bank) || 0), 1);
   const body = el("tbody");
   for (const bank of banks) {
     const size = Number(bank.bank) || 0;
-    const max = Number(bank.max) || 1;
-    const over = size > max;
     const tr = el("tr");
     tr.append(el("td", null, bank.name || ""));
     const barCell = el("td", "bar-cell");
@@ -14048,27 +14033,18 @@ function addBanks(parent, data) {
           { cls: "seg-reloc", bytes: (Number(bank.reloc) || 0) * 2 },
           { cls: "seg-sites", bytes: (Number(bank.map) || 0) * 2 },
         ],
-        max
+        scale
       )
     );
     tr.append(barCell);
-    tr.append(numCell(`${size} / ${max}`, over));
+    tr.append(numCell(String(size)));
     tr.append(numCell(String(bank.code ?? "")));
     tr.append(numCell(String(bank.pose ?? "")));
-    tr.append(numCell(String(bank.reloc ?? "")));
-    tr.append(numCell(String(bank.map ?? "")));
     body.append(tr);
   }
   table.append(body);
   section.append(table);
   parent.append(section);
-}
-
-function freeLabel(base, krill) {
-  if (base?.free == null && krill?.free == null) return "";
-  if (base?.free == null) return `${krill.free} free`;
-  if (krill?.free == null || krill.free === base.free) return `${base.free} free`;
-  return `${base.free} free · krill ${krill.free}`;
 }
 
 function addDisks(parent, data) {
@@ -14083,8 +14059,10 @@ function addDisks(parent, data) {
     return Math.max(n, a, b);
   }, 1);
   const section = el("section", "build-section");
-  const free = freeLabel(base, krill);
-  section.append(el("h2", null, free ? `Disk · ${free}` : "Disk"));
+  const free = base?.free ?? krill?.free;
+  section.append(
+    el("h2", null, free == null ? "Disk" : `${free} sectors free for ED/1050 disk`)
+  );
   const list = el("div", "build-mods");
   for (const row of rows) {
     const blocks = Math.max(Number(row.base?.blocks) || 0, Number(row.other?.blocks) || 0);
@@ -14155,8 +14133,10 @@ function render() {
   addModules(split, report);
   addDisks(split, report);
   if (split.childElementCount) panel.append(split);
-  addLevels(panel, report);
-  addBanks(panel, report);
+  const tables = el("div", "build-cols");
+  addLevels(tables, report);
+  addBanks(tables, report);
+  if (tables.childElementCount) panel.append(tables);
   addAdvanced(panel, report);
 }
 
@@ -14906,8 +14886,8 @@ function setStatus(msg, isError = false) {
 
 function updateDirtyIndicator() {
   const star = dirty ? "*" : "";
-  if (titleEl) titleEl.textContent = `Quake64${star}`;
-  document.title = dirty ? "Quake64 *" : "Quake64 Editor";
+  if (titleEl) titleEl.textContent = `QuakeA8${star}`;
+  document.title = dirty ? "QuakeA8 *" : "QuakeA8 Editor";
 }
 
 function markDirty() {
@@ -17094,57 +17074,24 @@ function roomItems() {
   ];
 }
 
-/** @type {"bg"|"line"|"fx"|"wpn"} */
-let roomColorChannel = "bg";
-
-const ROOM_COLOR_CHANNELS = [
-  { id: "bg", label: "Background", get: (o) => o.bgColor ?? ROOM_BG_DEFAULT, set: (o, v) => (o.bgColor = v) },
-  { id: "line", label: "Lines", get: (o) => o.lineColor ?? ROOM_LINE_DEFAULT, set: (o, v) => (o.lineColor = v) },
-  { id: "fx", label: "FX", get: (o) => o.fxColor ?? ROOM_FX_DEFAULT, set: (o, v) => (o.fxColor = v) },
-  { id: "wpn", label: "Weapon", get: (o) => o.weaponColor ?? ROOM_WPN_DEFAULT, set: (o, v) => (o.weaponColor = v) },
-];
-
 function roomPaletteEditor(objs, apply) {
   const wrap = document.createElement("div");
   wrap.className = "field color-field room-palette";
   const span = document.createElement("span");
-  span.textContent = "Colours";
-  const channels = document.createElement("div");
-  channels.className = "room-color-channels";
-  const active = ROOM_COLOR_CHANNELS.find((c) => c.id === roomColorChannel) || ROOM_COLOR_CHANNELS[0];
-  for (const ch of ROOM_COLOR_CHANNELS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const val = unanimous(objs, ch.get);
-    btn.className = "room-color-channel" + (ch.id === active.id ? " active" : "") + (val === undefined ? " mixed" : "");
-    if (val === undefined) {
-      btn.title = `${ch.label}: Mixed`;
-    } else {
-      btn.title = `${ch.label}: ${val} ${C64_NAMES[val]}`;
-      btn.style.background = C64_HEX[val];
-    }
-    const lbl = document.createElement("span");
-    lbl.textContent = ch.label;
-    btn.appendChild(lbl);
-    btn.addEventListener("click", () => {
-      roomColorChannel = ch.id;
-      renderInspector();
-    });
-    channels.appendChild(btn);
-  }
+  span.textContent = "Background";
   const row = document.createElement("div");
   row.className = "color-swatches";
-  const cur = unanimous(objs, active.get);
-  for (let i = 0; i < 16; i++) {
+  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
+  for (const slot of ROOM_BG_SLOTS) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "swatch" + (i === cur ? " selected" : "");
-    btn.title = `${i}: ${C64_NAMES[i]}`;
-    btn.style.background = C64_HEX[i];
-    btn.addEventListener("click", () => apply((obj) => active.set(obj, i)));
+    btn.className = "swatch" + (slot.byte === cur ? " selected" : "");
+    btn.title = `$${slot.byte.toString(16).padStart(2, "0")} ${slot.name}`;
+    btn.style.background = a8Hex(slot.byte);
+    btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = slot.byte)));
     row.appendChild(btn);
   }
-  wrap.append(span, channels, row);
+  wrap.append(span, row);
   return wrap;
 }
 

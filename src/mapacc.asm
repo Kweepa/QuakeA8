@@ -5,74 +5,94 @@
 ; reads the pointer word in GAME BSS. Always these macros, or an explicit
 ; `lda (ptr),y` after setting a pointer from the bound table.
 ;
-; Macros emit `lda $02id,x` (etc.): operand lo = field id = (.fld-room_x)/2,
-; hi = MAP_SMC_HI sentinel. tools/mkreloc.py scans game.prg for those
-; abs,x / abs,y ops and writes the reloc prefix. LoadLevel patches the two operand
-; bytes to the bound column address after bind_map. Do not execute these
-; until after that patch.
+; Macros emit `lda $02id,x` (etc.) under a global smc_N label: operand lo =
+; field id = (.fld-room_x)/2, hi = MAP_SMC_HI until LoadLevel patches both
+; operand bytes to the bound column. mkreloc / genaimeta relocate only those
+; labels. Do not execute the sites until after that patch.
 ;
-; After GAME assemble, mkreloc.py must run before mkdisk.py (see build.bat).
+; After GAME assemble, mkreloc.py must run before mkatr.py (see build-a8.bat).
 !zone mapacc
+!source "smc_tags.asm"
 
 !macro lda_mx .fld {
+	+smc_plant
 	lda MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro sta_mx .fld {
+	+smc_plant
 	sta MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro cmp_mx .fld {
+	+smc_plant
 	cmp MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro adc_mx .fld {
+	+smc_plant
 	adc MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro sbc_mx .fld {
+	+smc_plant
 	sbc MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro ora_mx .fld {
+	+smc_plant
 	ora MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro and_mx .fld {
+	+smc_plant
 	and MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro eor_mx .fld {
+	+smc_plant
 	eor MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro ldy_mx .fld {
+	+smc_plant
 	ldy MAP_SMC_BASE + ((.fld - room_x) / 2),x
 }
 !macro ldx_mx .fld {
+	+smc_plant
 	lda MAP_SMC_BASE + ((.fld - room_x) / 2),x
 	tax
 }
 !macro lda_my .fld {
+	+smc_plant
 	lda MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro sta_my .fld {
+	+smc_plant
 	sta MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro cmp_my .fld {
+	+smc_plant
 	cmp MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro adc_my .fld {
+	+smc_plant
 	adc MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro sbc_my .fld {
+	+smc_plant
 	sbc MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro ora_my .fld {
+	+smc_plant
 	ora MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro and_my .fld {
+	+smc_plant
 	and MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro eor_my .fld {
+	+smc_plant
 	eor MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro ldx_my .fld {
+	+smc_plant
 	ldx MAP_SMC_BASE + ((.fld - room_x) / 2),y
 }
 !macro ldy_my .fld {
+	+smc_plant
 	lda MAP_SMC_BASE + ((.fld - room_x) / 2),y
 	tay
 }

@@ -1,4 +1,4 @@
-!cpu 6510
+!cpu 6502
 !to "../enemies/skel_draw.bin", plain
 !source "build_flags.asm"
 !source "mem.asm"

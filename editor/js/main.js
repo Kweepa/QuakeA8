@@ -29,12 +29,9 @@ import {
   TRIGGER_PURPOSE_LABELS,
   clampVertFor,
   vertLimitFor,
-  C64_HEX,
-  C64_NAMES,
   ROOM_BG_DEFAULT,
-  ROOM_LINE_DEFAULT,
-  ROOM_FX_DEFAULT,
-  ROOM_WPN_DEFAULT,
+  ROOM_BG_SLOTS,
+  a8Hex,
   MAX_TRIGGER_TEXT,
   MAX_NAME_LEN,
   MAX_TAG_LEN,
@@ -554,8 +551,8 @@ function setStatus(msg, isError = false) {
 
 function updateDirtyIndicator() {
   const star = dirty ? "*" : "";
-  if (titleEl) titleEl.textContent = `Quake64${star}`;
-  document.title = dirty ? "Quake64 *" : "Quake64 Editor";
+  if (titleEl) titleEl.textContent = `QuakeA8${star}`;
+  document.title = dirty ? "QuakeA8 *" : "QuakeA8 Editor";
 }
 
 function markDirty() {
@@ -2742,57 +2739,24 @@ function roomItems() {
   ];
 }
 
-/** @type {"bg"|"line"|"fx"|"wpn"} */
-let roomColorChannel = "bg";
-
-const ROOM_COLOR_CHANNELS = [
-  { id: "bg", label: "Background", get: (o) => o.bgColor ?? ROOM_BG_DEFAULT, set: (o, v) => (o.bgColor = v) },
-  { id: "line", label: "Lines", get: (o) => o.lineColor ?? ROOM_LINE_DEFAULT, set: (o, v) => (o.lineColor = v) },
-  { id: "fx", label: "FX", get: (o) => o.fxColor ?? ROOM_FX_DEFAULT, set: (o, v) => (o.fxColor = v) },
-  { id: "wpn", label: "Weapon", get: (o) => o.weaponColor ?? ROOM_WPN_DEFAULT, set: (o, v) => (o.weaponColor = v) },
-];
-
 function roomPaletteEditor(objs, apply) {
   const wrap = document.createElement("div");
   wrap.className = "field color-field room-palette";
   const span = document.createElement("span");
-  span.textContent = "Colours";
-  const channels = document.createElement("div");
-  channels.className = "room-color-channels";
-  const active = ROOM_COLOR_CHANNELS.find((c) => c.id === roomColorChannel) || ROOM_COLOR_CHANNELS[0];
-  for (const ch of ROOM_COLOR_CHANNELS) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    const val = unanimous(objs, ch.get);
-    btn.className = "room-color-channel" + (ch.id === active.id ? " active" : "") + (val === undefined ? " mixed" : "");
-    if (val === undefined) {
-      btn.title = `${ch.label}: Mixed`;
-    } else {
-      btn.title = `${ch.label}: ${val} ${C64_NAMES[val]}`;
-      btn.style.background = C64_HEX[val];
-    }
-    const lbl = document.createElement("span");
-    lbl.textContent = ch.label;
-    btn.appendChild(lbl);
-    btn.addEventListener("click", () => {
-      roomColorChannel = ch.id;
-      renderInspector();
-    });
-    channels.appendChild(btn);
-  }
+  span.textContent = "Background";
   const row = document.createElement("div");
   row.className = "color-swatches";
-  const cur = unanimous(objs, active.get);
-  for (let i = 0; i < 16; i++) {
+  const cur = unanimous(objs, (o) => o.a8Bg ?? ROOM_BG_DEFAULT);
+  for (const slot of ROOM_BG_SLOTS) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "swatch" + (i === cur ? " selected" : "");
-    btn.title = `${i}: ${C64_NAMES[i]}`;
-    btn.style.background = C64_HEX[i];
-    btn.addEventListener("click", () => apply((obj) => active.set(obj, i)));
+    btn.className = "swatch" + (slot.byte === cur ? " selected" : "");
+    btn.title = `$${slot.byte.toString(16).padStart(2, "0")} ${slot.name}`;
+    btn.style.background = a8Hex(slot.byte);
+    btn.addEventListener("click", () => apply((obj) => (obj.a8Bg = slot.byte)));
     row.appendChild(btn);
   }
-  wrap.append(span, channels, row);
+  wrap.append(span, row);
   return wrap;
 }
 

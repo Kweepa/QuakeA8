@@ -1,215 +1,149 @@
-"""Emit unrolled Mike 30k loop bodies into src/_line_bodies.asm.
-
-Fast sd/su/td/tu: chained carry, no per-pixel CPY/SEC.
-Slow sds/sus: CPY/BPL + y_cross (flat lines that cross y=64).
-Steep never uses y_cross; a one-shot split stub continues via rest_cnt.
-"""
+"""Emit unrolled mode-E line bodies into src/_a8line_bodies.asm."""
 from pathlib import Path
 
-BITS = [0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]
-OUT = Path(__file__).resolve().parents[1] / "src" / "_line_bodies.asm"
+# Mode E: four colour clocks per byte, linear 32-byte rows. No charset, no y=64.
+A8_MASKS = [0xC0, 0x30, 0x0C, 0x03]
+A8_OUT = Path(__file__).resolve().parents[1] / "src" / "_a8line_bodies.asm"
 
 
-def col_adv(nc: str, dest: str) -> str:
-    return f"""	clc
+def y_step(down: bool) -> str:
+    """±32 on colptr via ey_dn/ey_up. Clobbers A. Leaves C set."""
+    return "\tjsr ey_dn\n" if down else "\tjsr ey_up\n"
+
+
+def y_subs() -> str:
+    return """ey_dn
+	clc
 	lda colptr
-	adc #64
+	adc #32
 	sta colptr
-	bcc {nc}
+	bcc ey_dn1
 	inc colptr+1
-{nc}
+ey_dn1
 	sec
-	jmp {dest}
-"""
-
-
-def sd_fast(i: int, b: int) -> str:
-    n = f"sd{i}"
-    return f"""{n}
-	lda (colptr),y
-	ora #${b:02x}
-	sta (colptr),y
-	dex
-	bne {n}c
 	rts
-{n}c
-	lda err_l
-	sbc dy
-	bcs {n}sk
-	adc dx
-	iny
-{n}sk
-	sta err_l
-"""
-
-
-def su_fast(i: int, b: int) -> str:
-    n = f"su{i}"
-    return f"""{n}
-	lda (colptr),y
-	ora #${b:02x}
-	sta (colptr),y
-	dex
-	bne {n}c
-	rts
-{n}c
-	lda err_l
-	sbc dy
-	bcs {n}sk
-	adc dx
-	dey
-{n}sk
-	sta err_l
-"""
-
-
-def sds_slow(i: int, b: int) -> str:
-    n = f"sds{i}"
-    return f"""{n}
-	lda (colptr),y
-	ora #${b:02x}
-	sta (colptr),y
-	dex
-	bne {n}c
-	rts
-{n}c
-	lda err_l
-	sbc dy
-	bcs {n}ny
-	adc dx
-	sta err_l
-	iny
-	cpy #64
-	bcc {n}d
-	jsr y_cross_down
-	jmp {n}d
-{n}ny
-	sta err_l
-{n}d
+ey_up
 	sec
-"""
-
-
-def sus_slow(i: int, b: int) -> str:
-    n = f"sus{i}"
-    return f"""{n}
-	lda (colptr),y
-	ora #${b:02x}
-	sta (colptr),y
-	dex
-	bne {n}c
-	rts
-{n}c
-	lda err_l
-	sbc dy
-	bcs {n}ny
-	adc dx
-	sta err_l
-	dey
-	bpl {n}d
-	jsr y_cross_up
-	jmp {n}d
-{n}ny
-	sta err_l
-{n}d
+	lda colptr
+	sbc #32
+	sta colptr
+	bcs ey_up1
+	dec colptr+1
+ey_up1
 	sec
+	rts
 """
 
 
-def steep_fast(prefix: str, ystep: str, split: str) -> str:
-    """Mike fall-through steep bodies + per-slot split stubs."""
+def byte_inc(tag: str) -> str:
+    return f"""	inc colptr
+	bne {tag}
+	inc colptr+1
+{tag}
+"""
+
+
+def shallow(prefix: str, down: bool) -> str:
     parts: list[str] = []
-    parts.append(f"{prefix}0s\n\tsta err_l\n")
-    for i, b in enumerate(BITS):
+    for i, mask in enumerate(A8_MASKS):
         n = f"{prefix}{i}"
-        ns = f"{prefix}{i}s"
+        nxt = f"{prefix}{(i + 1) & 3}"
+        step = y_step(down)
+        if i < 3:
+            tail = f"""	sta err_l
+{step}	jmp {nxt}
+{n}sk
+	sta err_l
+"""
+        else:
+            tail = f"""	sta err_l
+{step}	jmp {n}x
+{n}sk
+	sta err_l
+{n}x
+{byte_inc(n + "nb")}	jmp {prefix}0
+"""
         parts.append(
             f"""{n}
 	lda (colptr),y
-	ora #${b:02x}
+	ora #${mask:02x}
 	sta (colptr),y
 	dex
 	bne {n}c
-	lda rest_cnt
-	beq {n}rt
-	jmp {n}spl
-{n}rt
 	rts
 {n}c
-	{ystep}
 	lda err_l
-	sbc dx
-	bcs {ns}
-	adc dy
-"""
-        )
-        if i < 7:
-            parts.append(f"{prefix}{i + 1}s\n\tsta err_l\n")
-        else:
-            # Stay uses {prefix}7s (emitted by slot 6). X-step stores then wraps.
-            parts.append(f"	sta err_l\n{col_adv(prefix + '7nc', prefix + '0')}")
-
-    for i, _b in enumerate(BITS):
-        n = f"{prefix}{i}"
-        if i < 7:
-            xstep = f"	jmp {prefix}{i + 1}\n"
-        else:
-            xstep = col_adv(prefix + "7sc", prefix + "0")
-        parts.append(
-            f"""{n}spl
-	tax
-	lda #0
-	sta rest_cnt
-	jsr {split}
-	lda err_l
-	sbc dx
-	bcs {n}ss
-	adc dy
-	sta err_l
-{xstep}{n}ss
-	sta err_l
-	jmp {n}
-
-"""
+	sbc dy
+	bcs {n}sk
+	adc dx
+{tail}"""
         )
     return "".join(parts)
 
 
-def table(name: str, prefix: str) -> str:
-    lo = ",".join(f"<{prefix}{i}" for i in range(8))
-    hi = ",".join(f">{prefix}{i}" for i in range(8))
+def steep(prefix: str, down: bool) -> str:
+    parts: list[str] = []
+    for i, mask in enumerate(A8_MASKS):
+        n = f"{prefix}{i}"
+        step = y_step(down)
+        if i < 3:
+            xstep = ""
+        else:
+            xstep = f"""	sta err_l
+{byte_inc(n + "nb")}	jmp {prefix}0
+"""
+        parts.append(f"{n}s\n\tsta err_l\n")
+        parts.append(
+            f"""{n}
+	lda (colptr),y
+	ora #${mask:02x}
+	sta (colptr),y
+	dex
+	bne {n}c
+	rts
+{n}c
+{step}	lda err_l
+	sbc dx
+	bcs {n}s
+	adc dy
+"""
+        )
+        if i == 3:
+            parts.append(xstep)
+    return "".join(parts)
+
+
+def a8_table(name: str, prefix: str) -> str:
+    lo = ",".join(f"<{prefix}{i}" for i in range(4))
+    hi = ",".join(f">{prefix}{i}" for i in range(4))
     return f"{name}_l\t!byte {lo}\n{name}_h\t!byte {hi}\n"
 
 
-def main() -> None:
+def emit_a8() -> None:
     parts = [
-        "; Auto-generated by tools/genlinebodies.py — unrolled Mike 30k bodies\n",
-        "; Fast sd/su/td/tu: chained C, no per-pixel CPY. Slow sds/sus: CPY flats.\n",
-        "; ---- X major +Y (fast, same half) ----\n",
-        table("sdn", "sd"),
+        "; Auto-generated by tools/genlinebodies.py — mode-E line bodies\n",
+        "; Four masks, chained C, countdown in X. Y stays 0.\n",
+        "; A row is ±32 on colptr (ey_dn/ey_up). Four pixels then colptr+1. No y=64 split.\n",
+        y_subs(),
+        "; ---- X major +Y ----\n",
+        a8_table("esdn", "esd"),
+        shallow("esd", True),
+        "; ---- X major -Y ----\n",
+        a8_table("esup", "esu"),
+        shallow("esu", False),
+        "; ---- Y major +Y ----\n",
+        a8_table("etdn", "etd"),
+        steep("etd", True),
+        "; ---- Y major -Y ----\n",
+        a8_table("etup", "etu"),
+        steep("etu", False),
     ]
-    parts.extend(sd_fast(i, b) for i, b in enumerate(BITS))
-    parts.append(col_adv("sdcol", "sd0"))
-    parts.append("\n; ---- X major -Y (fast, same half) ----\n")
-    parts.append(table("sup", "su"))
-    parts.extend(su_fast(i, b) for i, b in enumerate(BITS))
-    parts.append(col_adv("sucol", "su0"))
-    parts.append("\n; ---- X major +Y (slow, crosses y=64) ----\n")
-    parts.append(table("sds", "sds"))
-    parts.extend(sds_slow(i, b) for i, b in enumerate(BITS))
-    parts.append(col_adv("sdscol", "sds0"))
-    parts.append("\n; ---- X major -Y (slow, crosses y=64) ----\n")
-    parts.append(table("sus", "sus"))
-    parts.extend(sus_slow(i, b) for i, b in enumerate(BITS))
-    parts.append(col_adv("suscol", "sus0"))
-    parts.append("\n; ---- Y major +Y (fast; rest_cnt split) ----\n")
-    parts.append(table("std", "td"))
-    parts.append(steep_fast("td", "iny", "split_down"))
-    parts.append("; ---- Y major -Y (fast; rest_cnt split) ----\n")
-    parts.append(table("stu", "tu"))
-    parts.append(steep_fast("tu", "dey", "split_up"))
-    OUT.write_text("".join(parts), encoding="utf-8")
-    print(f"Wrote {OUT}")
+    A8_OUT.write_text("".join(parts), encoding="utf-8")
+    print(f"Wrote {A8_OUT}")
+
+
+def main() -> None:
+    emit_a8()
 
 
 if __name__ == "__main__":

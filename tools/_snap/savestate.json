@@ -1,0 +1,335 @@
+{
+	"type": "ATSaveState",
+	"objects": [
+		{
+			"_type": "ATSaveState",
+			"version": 1,
+			"program_info": "Altirra 4.40",
+			"sim_run_time_seconds": 86.977787400353961,
+			"real_run_time_seconds": 111.3226476,
+			"cold_start_id": 0,
+			"hardware_mode": "800xl",
+			"memory_mode": "64k",
+			"video_standard": "ntsc",
+			"internal_basic": false,
+			"memory": 2,
+			"xmem_portb_mask": 0,
+			"xmem_antic_banking": false,
+			"xmem_aliasing": false,
+			"cpu_type": "6502",
+			"cpu_multiplier": 1,
+			"cpu": 3,
+			"antic": 4,
+			"pokey": 5,
+			"gtia": 6,
+			"pia": 7,
+			"stereo": false,
+			"mapram": false,
+			"os_rom": 8,
+			"internal_basic_rom": 9,
+			"cart": 0,
+			"cart2": 0,
+			"disk_drives": [
+				10
+			],
+			"sio_manager": 0,
+			"u1mb": 0,
+			"device_states": 11,
+			"high_memory": 0,
+			"high_addressing_enabled": true,
+			"axlon_memory": 0,
+			"axlon_aliasing_enabled": false,
+			"front_end": 12
+		},
+		{
+			"_type": "ATSaveStateMemoryBuffer",
+			"_path": "memory.bin"
+		},
+		{
+			"_type": "ATSaveStateCPU",
+			"pc": 3165,
+			"insn_pc": 3165,
+			"a": 54,
+			"x": 243,
+			"y": 128,
+			"p": 117,
+			"s": 236,
+			"ext816": 0,
+			"unused_cycle": true,
+			"irq_assert_time": "4294799041",
+			"irq_acknowledge_time": "4294799033",
+			"nmi_assert_time": "4294967280",
+			"current_ext_opcode": 0,
+			"current_ext_opcode_phase": 0,
+			"int_addr": 304,
+			"int_addr2": 48586,
+			"int_addr_bank": 0,
+			"int_rel_offset": 0,
+			"int_data": 54,
+			"int_data16": 0
+		},
+		{
+			"_type": "ATSaveStateAntic",
+			"x": 32,
+			"y": 248,
+			"dmactl": 33,
+			"chactl": 0,
+			"dlist": 965,
+			"hscrol": 0,
+			"vscrol": 0,
+			"pmbase": 0,
+			"chbase": 248,
+			"nmien": 192,
+			"nmist": 95,
+			"internal_state": 13
+		},
+		{
+			"_type": "ATSaveStatePokey",
+			"audf": [
+				0,0,163,0
+			],
+			"audc": [
+				0,0,175,0
+			],
+			"audctl": 0,
+			"irqen": 0,
+			"irqst": 247,
+			"skctl": 3,
+			"skstat": 255,
+			"allpot": 0,
+			"kbcode": 26,
+			"internal_state": 14,
+			"stereo_pair": 0,
+			"pot": [
+				228,228,228,228,228,228,228,228
+			]
+		},
+		{
+			"_type": "ATSaveStateGtia",
+			"hpospn": [
+				0,0,0,0
+			],
+			"hposmn": [
+				0,0,0,0
+			],
+			"sizepn": [
+				0,0,0,0
+			],
+			"sizem": 0,
+			"grafpn": [
+				0,0,0,0
+			],
+			"grafm": 0,
+			"colpm": [
+				0,0,0,0
+			],
+			"colpf": [
+				4,14,14,70
+			],
+			"colbk": 0,
+			"prior": 0,
+			"vdelay": 0,
+			"gractl": 0,
+			"consol": 8,
+			"pnpf": [
+				0,0,0,0
+			],
+			"mnpf": [
+				0,0,0,0
+			],
+			"pnpl": [
+				0,0,0,0
+			],
+			"mnpl": [
+				0,0,0,0
+			],
+			"internal_state": 15
+		},
+		{
+			"_type": "ATSaveStatePia",
+			"ora": 0,
+			"orb": 254,
+			"ddra": 0,
+			"ddrb": 255,
+			"cra": 60,
+			"crb": 60
+		},
+		{
+			"_type": "ATSaveStateFirmwareReference",
+			"ref_string": "",
+			"crc32": "787378271"
+		},
+		{
+			"_type": "ATSaveStateFirmwareReference",
+			"ref_string": "",
+			"crc32": "982915472"
+		},
+		{
+			"_type": "ATSaveStateDisk",
+			"idle_timer": "154621876",
+			"active_command_id": 0,
+			"active_command_state": 21,
+			"active_command_sector": 720,
+			"active_command_phys_sector": 720,
+			"active_command_timer": 0,
+			"active_command_buffered": 0,
+			"active_command_buffered_read_track": false,
+			"active_command_buffered_read_error": false,
+			"active_command_buffered_write_track": false,
+			"rotational_pos": 0.50004422664642334,
+			"current_track": 27,
+			"buffered_track": -1,
+			"last_read_sector": 0,
+			"active_command": 0
+		},
+		{
+			"_type": "ATSaveStateDeviceManager",
+			"root_node": 16
+		},
+		{
+			"_type": "ATUISaveStateFrontEnd",
+			"output_name": ""
+		},
+		{
+			"_type": "ATSaveStateAnticInternal",
+			"pf_data_read": 6,
+			"pf_data_write": 0,
+			"pf_char_read": 6,
+			"register_updates": [],
+			"dl_extra_loads_pending": false,
+			"dl_active": false,
+			"dl_dma_enabled_in_time": true,
+			"pf_display_counter": 0,
+			"pf_decode_counter": 1,
+			"pf_decode_offset": 0,
+			"pf_decode_char_offset": 0,
+			"pf_dma_last_check_x": 0,
+			"pf_dma_abnormal_char_inv": 0,
+			"pf_dma_enabled": false,
+			"pf_dma_active": true,
+			"wsync_active": false,
+			"wsync_release": false,
+			"rnmi_pending": false,
+			"hscroll_enabled": true,
+			"hscroll_delay": false,
+			"row_stop_use_vscroll": false,
+			"row_advance": false,
+			"pending_nmis": 64,
+			"early_nmien": 192,
+			"early_nmien2": 192,
+			"row_counter": 5,
+			"row_count": 8,
+			"latched_vscroll": 0,
+			"latched_vscroll2": 0,
+			"pf_row_dma_ptr_base": 53248,
+			"pf_row_dma_ptr_offset": 6033,
+			"pf_push_cycle_mask": 1,
+			"pf_abnormal_dma_pattern": 0,
+			"pf_ending_dma_pattern": 0,
+			"pf_abnormal_decode_pattern": 0,
+			"pf_abnormal_decode_shifter": 0,
+			"pf_char_fetch_ptr": 63493,
+			"pf_width_shift": 2,
+			"pf_hscroll_dma_offset": 0,
+			"pf_push_mode": 3,
+			"pf_hires_mode": true,
+			"pf_width": 1,
+			"pf_fetch_width": 2,
+			"pf_display_start": 32,
+			"pf_display_end": 96,
+			"pf_dma_start": 18,
+			"pf_dma_vend": 98,
+			"pf_dma_end": 98,
+			"pf_dma_latched_start": 0,
+			"pf_dma_latched_vend": 0,
+			"pf_dma_latched_end": 0,
+			"dl_control_prev": 18,
+			"dl_control": 0,
+			"dl_next": 247,
+			"pf_data_buffer": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"pf_char_buffer": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			],
+			"pf_decode_buffer": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+				0,0,0,0
+			],
+			"dlist_latch": 965,
+			"wsync_pending": 0,
+			"phantom_player_dma": false,
+			"missile_dma_disabled_late": false
+		},
+		{
+			"_type": "ATSaveStatePokeyInternal",
+			"clock15_offset": 81,
+			"clock64_offset": 2,
+			"poly9_offset": 191,
+			"poly17_offset": 8449,
+			"polyoff_offset": "154621876",
+			"timer_counters": [
+				256,256,10,256
+			],
+			"timer_borrow_counters": [
+				1,1,0,1
+			],
+			"two_tone_reset_counters": [
+				0,0
+			],
+			"serin_counter": 0,
+			"serin_shift_register": 197,
+			"serin_deferred_load": true,
+			"serin_waiting_for_start_bit": true,
+			"serout_event_time": 0,
+			"serout_counter": 0,
+			"serout_shift_register": 151,
+			"serout_valid": false,
+			"serout_shift_valid": false,
+			"trace_byte_index": 0,
+			"renderer_poly4_offset": 12,
+			"renderer_poly5_offset": 0,
+			"renderer_poly9_offset": 186,
+			"renderer_poly17_offset": 8444,
+			"output_flip_flops": 59,
+			"pot_charge_levels": [
+				0,0,0,0,0,0,0,0
+			],
+			"pot_master_counter": 228,
+			"pot_scan_active": false
+		},
+		{
+			"_type": "ATSaveStateGtiaInternal",
+			"register_changes": [],
+			"hires_latch": true,
+			"active_prior": 0,
+			"renderer_state": 17
+		},
+		{
+			"_type": "ATSaveStateDeviceNode",
+			"tag": "",
+			"state": 0,
+			"bus_tag": "",
+			"child_devices": []
+		},
+		{
+			"_type": "ATSaveStateGtiaRenderer",
+			"internal_state": [],
+			"active_prior": 0,
+			"hires_mode": true,
+			"render_x": 34
+		}
+	]
+}

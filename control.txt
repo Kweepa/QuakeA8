@@ -1,15 +1,15 @@
-^WASD....^ Forward/backward/strafe
-^JL......^ Turn
-^Space...^ Fire
-^K.......^ Use switch (triangle)
-^1234....^ Change weapon
-^F5......^ Quick save (non-krill)
-^F7......^ Quick load
+^Joystick...^ Move and shoot
+^Btn 2......^ Strafe
+^1234.......^ Change weapon
+^Shift-S....^ Quick save
+^Shift-L....^ Quick load
 
-If you have a mouse in port 1 and
-you have enabled it in the options,
-you can turn and shoot with it.
+If you have an ST mouse in port 2
+and you have enabled it in the
+options, you can turn and shoot with
+it. The joystick then strafes.
 
 Walk into doors to open them.
 Walk over items to pick them up.
+Walk into switches to activate them.
 Some switches must be shot.

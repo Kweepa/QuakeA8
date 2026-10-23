@@ -1,9 +1,10 @@
 ; --- build flags -------------------------------------------
-PROFILE		    = 0				; 1 = R/P/K/D bucket HUD + CIA samples
+
+PROFILE		    = 0				; 1 = R/P/K/D bucket HUD + VBI samples
 HUD_FRAME_MS	= 0				; 1 = frame time ms on HUD row 0
 HUD_POS		    = 0				; 1 = X/Y/Z/yaw/pitch on HUD row 2
 INF_AMMO		= 0				; 1 = guns fire without spending ammo
-IRQ_DEBUG_SPLIT	= 0				; 1 = $d020 white from 185, red 6 cycles after the 186 split
+JUKEBOX		= 0				; 1 = Jukebox row in the menu (one tune; off for now)
 
 ; Stage buckets closed by prof_add_bucket. Same ids in GAME and skel_draw.
 PROF_CLEAR	= 0
@@ -11,4 +12,5 @@ PROF_ROT	= 1
 PROF_PROJ	= 2
 PROF_CLIP	= 3
 PROF_DRAW	= 4
-PROF_NBUCKET = 5
+PROF_UPDATE	= 5			; stamp, sim, enemy update — closed at the bottom of main
+PROF_NBUCKET = 6

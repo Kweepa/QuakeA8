@@ -1,6 +1,6 @@
 ; Streamed Shambler attack. Linked at AI_LINK_BASE, relocated on load.
 ; Magic: straight tracer, then a 3-frame XZ-jitter bolt. Melee: smash / claws.
-!cpu 6510
+!cpu 6502
 !to "../enemies/ai_shambl.bin", plain
 !source "mem.asm"
 !source "zp.asm"

@@ -1,6 +1,6 @@
 ; Chthon. Linked at AI_LINK_BASE. No walking: face the player, rise once, then loop attack.
 ; Idle is undrawn. Lava is a grenade with GREN_F_LAVA (no gravity, burst on contact).
-!cpu 6510
+!cpu 6502
 !to "../enemies/ai_chthon.bin", plain
 !source "mem.asm"
 !source "zp.asm"
@@ -32,9 +32,13 @@ ai_chthon_entry
 	jmp .ch_end
 +
 	cmp #AI_CMD_APPROACH_MOVE
-	beq .ch_move
+	bne +
+	jmp .ch_move
++
 	cmp #AI_CMD_APPROACH_ENTER
-	beq .ch_enter
+	bne +
+	jmp .ch_enter
++
 	cmp #AI_CMD_DRAW
 	bne +
 	jmp .ch_draw
@@ -46,6 +50,16 @@ ai_chthon_entry
 	cmp #AI_CMD_ANIM_FIRE
 	bne +
 	jmp .ch_anim_fire
++
+	cmp #AI_CMD_RED_ON
+	bne +
+	lda #$49			; eor #m
+	jmp ch_ops
++
+	cmp #AI_CMD_RED_OFF
+	bne +
+	lda #$09			; ora #m
+	jmp ch_ops
 +
 	rts
 
@@ -505,6 +519,8 @@ ai_chthon_entry
 	sta ch_by
 	sty ch_ay
 .chd_ord
+	lda #$49
+	jsr ch_ops			; red bolt
 	lda #0
 	sta ch_i
 	sta ch_pok
@@ -586,7 +602,8 @@ ai_chthon_entry
 	pla
 	pla
 .chd_rts
-	rts
+	lda #$09
+	jmp ch_ops
 
 ; Slot X → centre. Slot 0 fills ch_ax/ay/az. Slot 1 fills ch_by/bz (X stays ch_ax).
 .ch_center
@@ -933,6 +950,27 @@ ch_elec
 	lda #0
 	sta ch_acc_l,x
 	sta ch_acc_h,x
+	rts
+
+; Line bodies are lda (colptr),y / ora #m / sta (colptr),y. eor over paper %01 gives %10 (COLPF1 red).
+; Shared pixels (joints, triangle corners) cancel to paper; a red pixel on ink goes black.
+ch_ops
+	sta esd0+2
+	sta esd1+2
+	sta esd2+2
+	sta esd3+2
+	sta esu0+2
+	sta esu1+2
+	sta esu2+2
+	sta esu3+2
+	sta etd0+2
+	sta etd1+2
+	sta etd2+2
+	sta etd3+2
+	sta etu0+2
+	sta etu1+2
+	sta etu2+2
+	sta etu3+2
 	rts
 
 ; Data after all code so genaimeta's opcode walk stays aligned.

@@ -1,21 +1,15 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-call build.bat
+call build-a8.bat
 if errorlevel 1 exit /b 1
 
-if exist "%~dp0setup-env.bat" call "%~dp0setup-env.bat"
-if defined VICE if exist "%VICE%" goto launch
-if defined VICE_BIN if exist "%VICE_BIN%\x64sc.exe" (
-  set VICE=%VICE_BIN%\x64sc.exe
-  goto launch
-)
-echo VICE not found — quake64.d64 is built; run it manually.
-exit /b 0
-
-:launch
-if not exist "%~dp0quake64.d64" (
-  echo quake64.d64 missing after build
+if not exist "%~dp0quake.atr" (
+  echo quake.atr missing after build
   exit /b 1
 )
-start "" "%VICE%" -silent -pal -autostartprgmode 0 -trapdevice8 +drive8truedrive -8 "%~dp0quake64.d64" -autostart "%~dp0quake64.d64"
+if not exist "C:\app\altirra\Altirra64.exe" (
+  echo Altirra not found — quake.atr is built; run it manually.
+  exit /b 0
+)
+start "" "C:\app\altirra\Altirra64.exe" /hardware:800xl /ntsc /nobasic /memsize:64K /w /diskemu:1050 /disk "%~dp0quake.atr"

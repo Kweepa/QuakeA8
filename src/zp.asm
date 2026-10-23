@@ -57,7 +57,7 @@ hud_n		= $43			; hud_print remainder
 dt_tmp		= $44			; calc_frame_dt
 
 ; Keyboard (filled by raster IRQ, read in main)
-keys		= $45			; KEY_* bits (W A S D I J K L)
+keys		= $45			; KEY_* bits (W A S D I J L)
 cam_xl		= $46			; camera 8.8 world X
 cam_zl		= $4b
 cam_yl		= $4c
@@ -123,7 +123,7 @@ e1zh		= $6d
 cam_xh		= $6e			; camera 8.8 integer
 cam_zh		= $6f
 cam_yh		= $70
-mul_y		= $71			; smul16_7 saved |Y|
+mul_y		= $71			; (was smul16_7 saved |Y|)
 mul_c		= $73			; 16×8 addend high
 anim_acc_l	= $74			; ms accumulator toward ANIM_MS
 anim_acc_h	= $75

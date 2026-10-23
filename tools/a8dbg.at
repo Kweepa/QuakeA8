@@ -1,0 +1,23 @@
+.logopen C:/dev/QuakeA8/tools/a8mem.log
+.echo BATCH
+bp $0937
+g
+e $0c69 a9 0e ea
+bc *
+bx "pc=$0937 and db($6e)>=$2c"
+g
+e $2d 00
+e $6e 2c
+e $46 00
+bc *
+bx "pc=$8f8f and db($78)!=0"
+g
+bc *
+bp $0a90
+g
+g
+.echo SHOW
+.antic
+db $0368 L16
+.savestate C:/dev/QuakeA8/tools/elev.atstate
+.logclose

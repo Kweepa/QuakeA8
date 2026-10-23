@@ -1,6 +1,6 @@
 ---
-description: Packed-map SoA must use mapacc macros; reloc scan is part of the disk build
-globs: src/**/*.asm, tools/mkdisk.py, tools/mkreloc.py, build.bat
+description: Packed-map SoA must use mapacc macros; smc_N labels are the reloc list
+globs: src/**/*.asm, tools/mkreloc.py, tools/mkatr.py, build-a8.bat
 alwaysApply: true
 ---
 
@@ -12,4 +12,4 @@ Field labels (`en_x`, `room_bg`, `door_y`, …) in `src/map_bss.asm` are **point
 - Never `lda en_x,x` or `sta room_bg,y` — that assembles a load/store of the BSS pointer word.
 - Indirect is fine only after an explicit pointer setup (`lda (ptr),y`).
 
-Macros emit `lda $02id,x` (sentinel hi). After ACME writes `game.prg`, `python tools/mkreloc.py` must run **before** `python tools/mkdisk.py` (wired in `build.bat`). Skipping the scan ships a stale `RELOC`. New fields: add the `!word` in `map_bss.asm`, bind it in `bind_map`, keep using the macros — `mkreloc.py` picks up new sites.
+Macros emit `lda $02id,x` (sentinel hi) under a global `smc_N` label. After ACME writes `game.prg`, `python tools/mkreloc.py` must run **before** the reloc assemble and `python tools/mkatr.py` (wired in `build-a8.bat`). It patches only those labels. New fields: add the `!word` in `map_bss.asm`, bind it in `bind_map`, keep using the macros.

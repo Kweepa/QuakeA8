@@ -1577,19 +1577,19 @@ neg_a
 	rts
 
 ; ------------------------------------------------------------------
-; Proximity: switches (K) + automatic elevators
+; Proximity: a blocked move fires a use switch. Backpacks every frame.
 ; ------------------------------------------------------------------
 SW_USE_RANGE	= 4			; max XZ distance to switch AABB
 
 try_proximity
-	; K rising edge — one fire per press
-	lda key_use
+	; door_blk rising edge — one fire while the block holds
+	lda door_blk
 	bne .tp_kd
 	sta key_use_was			; A = 0
 	jmp .tp_el
 .tp_kd
 	lda key_use_was
-	bne .tp_el			; still held
+	bne .tp_el			; still blocked
 	lda #1
 	sta key_use_was
 	ldx #0
@@ -1607,7 +1607,7 @@ try_proximity
 	and #$7f
 	cmp #SW_DEST_TRIG + 1
 	bcs .tp_go			; $ff: no dest
-	jmp .tp_el			; shootable: press consumed, no sound
+	jmp .tp_sn			; shootable: bump does not fire it
 .tp_go
 	jsr fire_switch
 	jmp .tp_el			; one switch per press

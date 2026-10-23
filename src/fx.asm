@@ -207,6 +207,9 @@ draw_explosion
 	jsr fx_clip_x
 	bcc .de_n
 	sta x0
+
+	lsr x0
+
 	ldx enemy_idx
 	lda fx_vy,x
 	jsr fx_vel_t8

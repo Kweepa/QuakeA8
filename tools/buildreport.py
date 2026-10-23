@@ -9,9 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import struct
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -19,67 +17,41 @@ from pathlib import Path
 from checkheap import heap_report
 from genaibanks import DOS_NAMES, ENEMY_BANK_MAX, HEADER_SIZE, MAGIC
 from memoryreport import module_report
-from mkdisk import find_c1541
+from mkatr import DIR_SEC, DIR_SECS, ENTRY, OUT as ATR_PATH, SECTOR, SECTORS
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "build-report.json"
 ENEMY_DIR = ROOT / "enemies"
-
-VARIANTS = (
-    ("kernal", "game.lbl"),
-    ("krill", "game-krill.lbl"),
-)
-DISKS = ("quake64.d64", "quake64-krill.d64")
-
-FILETYPES = {"prg", "seq", "usr", "rel", "del"}
-DIR_LINE = re.compile(r'^\s*(\d+)\s+"([^"]*)"\s+(\S+)')
-FREE_LINE = re.compile(r"(\d+)\s+blocks free", re.I)
 
 
 def now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def parse_c1541_dir(text: str) -> dict:
-    files: list[dict[str, int | str]] = []
-    free: int | None = None
-    for line in text.splitlines():
-        free_m = FREE_LINE.search(line)
-        if free_m:
-            free = int(free_m.group(1))
-            continue
-        m = DIR_LINE.match(line)
-        if not m:
-            continue
-        kind = m.group(3).lower().rstrip("<")
-        if kind not in FILETYPES:
-            continue
-        files.append({"name": m.group(2).strip(), "blocks": int(m.group(1))})
-    if free is None:
-        raise SystemExit("c1541 directory has no blocks-free line")
-    return {"free": free, "files": files}
-
-
-def disk_listing(c1541: Path, name: str) -> dict:
-    path = ROOT / name
+def atr_listing(path: Path) -> dict:
+    """Directory of quake.atr. `blocks` is the sector count the boot loader uses."""
     if not path.is_file():
         raise SystemExit(f"missing: {path}")
-    proc = subprocess.run(
-        [str(c1541), "-attach", str(path), "-dir"],
-        capture_output=True,
-        text=True,
-        encoding="latin-1",
-        errors="replace",
-    )
-    text = proc.stdout or ""
-    if "blocks free" not in text.lower():
-        text = (proc.stdout or "") + "\n" + (proc.stderr or "")
-    if proc.returncode != 0 and "blocks free" not in text.lower():
-        err = (proc.stderr or proc.stdout or "").strip()
-        raise SystemExit(f"c1541 -dir {name} failed: {err}")
-    listing = parse_c1541_dir(text)
-    listing["name"] = name
-    return listing
+    image = path.read_bytes()[16:]
+    dir_off = (DIR_SEC - 1) * SECTOR
+    directory = image[dir_off : dir_off + DIR_SECS * SECTOR]
+    files: list[dict[str, int | str]] = []
+    used = DIR_SEC + DIR_SECS - 1
+    for i in range(len(directory) // ENTRY):
+        ent = directory[i * ENTRY : (i + 1) * ENTRY]
+        if ent[0] == 0:
+            break
+        name = ent[:8].split(b"\x00", 1)[0].decode("ascii", errors="replace")
+        start = ent[8] | (ent[9] << 8)
+        count = ent[10] | (ent[11] << 8)
+        files.append({"name": name, "blocks": count})
+        used = max(used, start + count - 1)
+    return {
+        "name": path.name,
+        "free": SECTORS - used,
+        "unit": "sectors",
+        "files": files,
+    }
 
 
 def read_bank(path: Path, name: str) -> dict:
@@ -175,19 +147,13 @@ def stamp_failure(step: str) -> None:
 
 
 def collect_success() -> dict:
-    c1541 = find_c1541()
-    if not c1541:
-        raise SystemExit("c1541 not found. Install VICE or set VICE_BIN.")
     return {
         "ok": True,
         "step": None,
         "time": now(),
-        "variants": {
-            name: collect_variant(labels, symbols=(name == "kernal"))
-            for name, labels in VARIANTS
-        },
+        "variants": {"a8": collect_variant("game.lbl", symbols=True)},
         "banks": collect_banks(),
-        "disks": {name: disk_listing(c1541, name) for name in DISKS},
+        "disks": {"quake.atr": atr_listing(ATR_PATH)},
     }
 
 

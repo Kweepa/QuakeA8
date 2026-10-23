@@ -17,10 +17,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Start corridor",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -30,7 +26,8 @@
               "su": 26,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "d7962384-2db2-4a88-a53a-a1112e2ced4e",
@@ -45,10 +42,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Elevator down",
-          "bgColor": 6,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 1,
@@ -58,7 +51,8 @@
               "su": 10,
               "sv": 41
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "7f98a06a-3a51-401a-b1d4-40b9ebad9a87",
@@ -162,10 +156,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Courtyard",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 11,
           "shape": "T",
           "rx": 3,
           "ry": 0,
@@ -179,7 +169,8 @@
               "su": 15,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "7512297f-f012-47f8-b276-c7258bd560c0",
@@ -278,15 +269,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Entryway",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "8fff08eb-f3f6-4448-8608-54c3449f4486",
@@ -301,15 +289,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Foyer",
-          "bgColor": 6,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 132
         },
         {
           "id": "54e070d8-96e5-45df-a8a6-c4d0981579aa",
@@ -449,15 +434,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Attic",
-          "bgColor": 0,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 4
         },
         {
           "id": "5815d324-6a01-4d2c-9502-3f3a421cee04",
@@ -472,10 +454,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Bridge",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 3,
           "ry": 3,
@@ -489,7 +467,8 @@
               "su": 40,
               "sv": 10
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "bcc49cd0-7f52-4aff-b5b0-06934f74d4d6",
@@ -606,15 +585,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Secret",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "305f295c-a13a-4b18-8b11-ddd111b1b39e",
@@ -661,10 +637,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Connector lambda",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -674,7 +646,8 @@
               "su": 17,
               "sv": 24
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "80e7e930-1707-46f3-9e8c-de2f5070ee6f",
@@ -729,15 +702,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Spiral ramps",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 196
         },
         {
           "id": "2fbf6971-14d3-4f11-8416-71e930b6cb0c",
@@ -827,10 +797,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Zigzag to exit",
-          "bgColor": 11,
-          "lineColor": 15,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 2,
           "ry": 0,
@@ -844,7 +810,8 @@
               "su": 18,
               "sv": 22
             }
-          ]
+          ],
+          "a8Bg": 6
         },
         {
           "id": "dee114a8-e507-4015-aee7-50b82b68bb7a",
@@ -879,10 +846,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Exit room",
-          "bgColor": 6,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 14,
           "shape": "T",
           "rx": 0,
           "ry": 1,
@@ -896,7 +859,8 @@
               "su": 7,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "06698ef7-d49f-45ab-8c25-628ccba3de67",
@@ -1454,15 +1418,12 @@
           "axis": "z",
           "dir": 1,
           "name": "",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "c238f536-0b2d-415a-ab58-f0536f2b224b",
@@ -1513,10 +1474,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Entry",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 2,
           "ry": 0,
@@ -1526,7 +1483,8 @@
               "su": 4,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "1f4fd218-f067-43fd-9a1c-02b31a2cf5db",
@@ -1608,10 +1566,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Stairs",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -1621,7 +1575,8 @@
               "su": 10,
               "sv": 10
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "1ce5ded8-cb67-4b56-8142-2fa1b2bd22f0",
@@ -1717,15 +1672,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Foyer",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "cda7d50b-043e-4d2c-bd63-297524732e60",
@@ -1772,10 +1724,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Bridge",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 3,
           "ry": 0,
@@ -1789,7 +1737,8 @@
               "su": 6,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "d2954e0e-2b56-4d7f-b8b2-a244944a8d8a",
@@ -1930,15 +1879,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Hall",
-          "bgColor": 12,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 8
         },
         {
           "id": "6743d78b-b10a-4a21-a9ed-eca0ba57bce7",
@@ -1987,10 +1933,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Junction",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 0,
           "ry": 3,
@@ -2004,7 +1946,8 @@
               "su": 14,
               "sv": 24
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "2215693b-658a-4e6f-98f2-8e3073683be9",
@@ -2091,10 +2034,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Gallery",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -2104,7 +2043,8 @@
               "su": 14,
               "sv": 22
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "71beb0b0-e3f8-4902-8c6e-aa5360b45e94",
@@ -2153,10 +2093,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Armoury",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -2166,7 +2102,8 @@
               "su": 14,
               "sv": 14
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "486e7247-6a3e-4551-bea1-78db519ad754",
@@ -2196,10 +2133,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Key Room",
-          "bgColor": 12,
-          "lineColor": 15,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 1,
           "ry": 3,
@@ -2213,7 +2146,8 @@
               "su": 7,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 8
         },
         {
           "id": "bb23457d-5524-44db-bb59-ae5d4821dc2c",
@@ -2301,15 +2235,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Back Stair",
-          "bgColor": 11,
-          "lineColor": 15,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "32fadc91-50fd-464b-83d5-ae65be216f92",
@@ -2359,10 +2290,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Backroom",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 1,
@@ -2376,7 +2303,8 @@
               "su": 13,
               "sv": 20
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "1c572e13-1b60-48fc-abea-43a8adb20734",
@@ -2391,10 +2319,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Backhall",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 2,
           "ry": 1,
@@ -2408,7 +2332,8 @@
               "su": 25,
               "sv": 9
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "6de5c39e-516e-4780-ae51-2b93206e5a8b",
@@ -2492,15 +2417,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Yard",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "80430749-edbc-4d7d-bbca-332263790b75",
@@ -2515,10 +2437,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Exit Stair",
-          "bgColor": 2,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -2528,7 +2446,8 @@
               "su": 15,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "87b9a1be-0500-45bd-a0a3-38a481a30200",
@@ -2543,15 +2462,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Gate",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 3,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "375a7b75-e6be-425a-a715-ae43c3308727",
@@ -3096,15 +3012,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Quad Cache",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "47200e9d-7dab-4c92-b971-8fdaeb2e43fb",
@@ -3171,10 +3084,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Entry",
-          "bgColor": 0,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 7,
           "shape": "L",
           "rx": 1,
           "ry": 2,
@@ -3184,7 +3093,8 @@
               "su": 13,
               "sv": 1
             }
-          ]
+          ],
+          "a8Bg": 4
         },
         {
           "id": "6d2fe92c-a23b-42df-bd1c-9c23a145c079",
@@ -3239,10 +3149,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Entryhall",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -3252,7 +3158,8 @@
               "su": 17,
               "sv": 16
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "af5ce2d5-46fe-41f0-a786-902b097223c4",
@@ -3267,10 +3174,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Jail",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 2,
@@ -3280,7 +3183,8 @@
               "su": 3,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "f8e1b4df-8eb0-4162-b5bd-39935b5f594f",
@@ -3422,10 +3326,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Crusher",
-          "bgColor": 11,
-          "lineColor": 5,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -3435,7 +3335,8 @@
               "su": 8,
               "sv": 5
             }
-          ]
+          ],
+          "a8Bg": 6
         },
         {
           "id": "322cb363-f5c5-4ef2-ad35-6932b2d879a8",
@@ -3560,10 +3461,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Sheugh",
-          "bgColor": 6,
-          "lineColor": 14,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 2,
@@ -3577,7 +3474,8 @@
               "su": 6,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "5eb81cec-4503-42a0-a628-919afd79b0f5",
@@ -3612,10 +3510,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Mezzanine",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -3625,7 +3519,8 @@
               "su": 12,
               "sv": 17
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "5493a003-9c4f-435f-90cc-c0bf10da91f2",
@@ -3757,10 +3652,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Underhall",
-          "bgColor": 11,
-          "lineColor": 15,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -3770,7 +3661,8 @@
               "su": 43,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 6
         },
         {
           "id": "a0da3e9d-4daa-4cf0-a568-5c7795c8b48c",
@@ -3859,15 +3751,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Oubliette",
-          "bgColor": 4,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "4a6d6b27-8cc7-43bf-9084-81e7aac2a4d5",
@@ -3899,10 +3788,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Slog",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 1,
@@ -3916,7 +3801,8 @@
               "su": 8,
               "sv": 7
             }
-          ]
+          ],
+          "a8Bg": 6
         },
         {
           "id": "a3584769-48e9-462b-94b4-4978387f5b82",
@@ -3951,15 +3837,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Chonk",
-          "bgColor": 11,
-          "lineColor": 13,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "7fedb419-2222-4963-b71b-8da6a64ebe8f",
@@ -4239,10 +4122,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Post gold",
-          "bgColor": 4,
-          "lineColor": 6,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 2,
@@ -4252,7 +4131,8 @@
               "su": 6,
               "sv": 10
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "e463bea0-ba13-4211-80ff-37294d3e5453",
@@ -4302,15 +4182,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Double Decker Top",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 196
         },
         {
           "id": "6bd6aac5-b883-492e-bcab-e4497e5c636b",
@@ -4378,15 +4255,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Sludge",
-          "bgColor": 5,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 196
         },
         {
           "id": "938fd450-4c8f-4dca-bffb-80f05b70758a",
@@ -4421,10 +4295,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Stair",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -4434,7 +4304,8 @@
               "su": 6,
               "sv": 6
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "c851c7b4-d0dd-4b17-b837-475654de64b6",
@@ -4499,10 +4370,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Riser",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -4512,7 +4379,8 @@
               "su": 16,
               "sv": 3
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "1e13c2c7-6565-4576-850c-7fa0c19f22b8",
@@ -4648,10 +4516,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Pre Exit",
-          "bgColor": 2,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -4661,7 +4525,8 @@
               "su": 12,
               "sv": 31
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "93272be8-ca62-4b8b-b183-5af142e877b9",
@@ -4676,10 +4541,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Exit",
-          "bgColor": 4,
-          "lineColor": 1,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 0,
@@ -4689,7 +4550,8 @@
               "su": 18,
               "sv": 36
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "bc6e9d7b-5f5e-401d-b91e-13f6d66e5591",
@@ -5045,15 +4907,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Ring Cache",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 3,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "0b16cbfd-9fc8-4ccb-bbf8-cbb55b8fb3c8",
@@ -5083,15 +4942,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Double Decker Bot",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "7d630268-db54-4ed8-b617-9533f2646eb8",
@@ -5175,15 +5031,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Roof entry",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "6f0bea83-03ff-4e6f-b277-c739bc5cfb64",
@@ -5286,15 +5139,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Staircase",
-          "bgColor": 6,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 132
         },
         {
           "id": "1e952c76-df92-437b-bedd-c5754cb6c188",
@@ -5421,10 +5271,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Corridor",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 0,
@@ -5438,7 +5284,8 @@
               "su": 5,
               "sv": 14
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "885e1eb0-d347-4a70-a2de-abcfe75bb62c",
@@ -5473,10 +5320,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Centrarium",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 0,
@@ -5486,7 +5329,8 @@
               "su": 15,
               "sv": 13
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "10deef3f-43ae-4713-94c2-440c1134df7e",
@@ -5571,10 +5415,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Drawbridge",
-          "bgColor": 12,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 6,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -5584,7 +5424,8 @@
               "su": 16,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 8
         },
         {
           "id": "48ed040d-4642-4cd7-8bc8-d42d239d9259",
@@ -5639,15 +5480,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Shaft",
-          "bgColor": 0,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 11,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 4
         },
         {
           "id": "14afc904-f6ff-4a9e-a57b-2f7c3ef04d4a",
@@ -5702,10 +5540,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Underhall",
-          "bgColor": 5,
-          "lineColor": 6,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 0,
@@ -5719,7 +5553,8 @@
               "su": 8,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 196
         },
         {
           "id": "d8ea5971-b319-4138-8144-1e42955c964b",
@@ -5838,15 +5673,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Rafters",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "3e43a75d-c2e8-42c6-b1a8-727515435e15",
@@ -6034,10 +5866,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Connector",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -6047,7 +5875,8 @@
               "su": 13,
               "sv": 10
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "a9fb3a3a-d684-4e1e-a5e2-c53dce45e39e",
@@ -6079,10 +5908,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Joint",
-          "bgColor": 6,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -6092,7 +5917,8 @@
               "su": 31,
               "sv": 6
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "1c780335-5460-459c-bdf5-696d6c7980e0",
@@ -6127,15 +5953,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Pools",
-          "bgColor": 5,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 196
         },
         {
           "id": "cd28055f-96d8-4398-bb38-451130a19cf8",
@@ -6168,15 +5991,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Upper",
-          "bgColor": 2,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 66
         },
         {
           "id": "e2bf9bc9-68c4-48fa-bf62-722f00bf385f",
@@ -6226,15 +6046,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Rise",
-          "bgColor": 2,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 66
         },
         {
           "id": "90ac48bf-9581-4507-88b2-8487fe40d5d2",
@@ -6284,15 +6101,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Exit",
-          "bgColor": 10,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 74
         },
         {
           "id": "7cf60e61-3199-4744-a4fa-b9761da2c500",
@@ -6680,10 +6494,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Drawbridge",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -6693,7 +6503,8 @@
               "su": 16,
               "sv": 28
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "075228eb-8bba-4c1b-8216-32e836371820",
@@ -6863,15 +6674,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Entry",
-          "bgColor": 2,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 66
         },
         {
           "id": "6c5e3a35-7255-4dfc-a448-4bfffb110833",
@@ -6886,10 +6694,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Entranceway",
-          "bgColor": 2,
-          "lineColor": 5,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -6899,7 +6703,8 @@
               "su": 13,
               "sv": 10
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "e18e913d-008b-4c2f-8d58-45430a154cec",
@@ -6934,15 +6739,12 @@
           "axis": "z",
           "dir": 1,
           "name": "MidKeep",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "9c0e26dc-9c1b-4c58-a993-5284ec6e9dc5",
@@ -6977,10 +6779,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Side",
-          "bgColor": 2,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -6990,7 +6788,8 @@
               "su": 8,
               "sv": 14
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "a6b5711e-686b-4e63-a190-c84995af006c",
@@ -7005,10 +6804,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Down",
-          "bgColor": 12,
-          "lineColor": 13,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 1,
           "ry": 2,
@@ -7018,7 +6813,8 @@
               "su": 9,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 8
         },
         {
           "id": "f2eedff3-4ce5-41ba-8039-fe0301fcc77a",
@@ -7088,15 +6884,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Basement",
-          "bgColor": 11,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "8594a5bb-9cd7-469d-a42f-8f1fb12ee4b7",
@@ -7273,15 +7066,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Hall",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "7f13c3d1-c01e-419f-bf16-4f5b29ad4c05",
@@ -7333,15 +7123,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Loop",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "f325ed65-6b65-4366-ab8b-eff3d78e5aaf",
@@ -7405,10 +7192,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Elevated",
-          "bgColor": 6,
-          "lineColor": 14,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -7418,7 +7201,8 @@
               "su": 30,
               "sv": 28
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "f60d081c-c9cb-464e-964f-d1c54adec8d1",
@@ -7598,15 +7382,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Cache",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "8c37cd97-6fc2-4800-9450-f1091514fbbe",
@@ -7636,10 +7417,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Back Stair",
-          "bgColor": 2,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -7649,7 +7426,8 @@
               "su": 16,
               "sv": 18
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "e3a0c30a-57f3-453b-9e9e-3ed14048e91b",
@@ -7729,10 +7507,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Key Room",
-          "bgColor": 12,
-          "lineColor": 3,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 0,
           "ry": 0,
@@ -7746,7 +7520,8 @@
               "su": 5,
               "sv": 11
             }
-          ]
+          ],
+          "a8Bg": 8
         },
         {
           "id": "c9ce4765-ae3f-4e96-85cf-be089702fbf1",
@@ -7825,10 +7600,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Steps Up",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -7838,7 +7609,8 @@
               "su": 10,
               "sv": 16
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "2aa62ed2-6c38-4138-8bfe-17f16248abbc",
@@ -7933,15 +7705,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Killing floor",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 36
         },
         {
           "id": "7a2f4cdb-f26e-420c-acb5-ad2474ea7f26",
@@ -8073,10 +7842,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Attic Climb",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 1,
@@ -8086,7 +7851,8 @@
               "su": 8,
               "sv": 11
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "d2e53f7b-3f56-487c-9f88-07b9de8ece3f",
@@ -8166,15 +7932,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Attic",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "efae3593-a242-43ac-b82b-813e83ebe05a",
@@ -8280,15 +8043,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Recharge",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 100
         },
         {
           "id": "86ea8b1b-3d59-45f5-8a36-57ac354e5446",
@@ -8341,15 +8101,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Shambler Fight",
-          "bgColor": 3,
-          "lineColor": 0,
-          "fxColor": 1,
-          "weaponColor": 11,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 166
         },
         {
           "id": "c4082cf6-da6e-4c67-81bb-53e0250ff043",
@@ -8483,15 +8240,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Behind Silver",
-          "bgColor": 0,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 4
         },
         {
           "id": "d514d362-2357-4879-b815-e2990b5049d5",
@@ -8538,10 +8292,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Exit",
-          "bgColor": 2,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "S",
           "rx": 0,
           "ry": 1,
@@ -8555,7 +8305,8 @@
               "su": 9,
               "sv": 23
             }
-          ]
+          ],
+          "a8Bg": 66
         },
         {
           "id": "2cda72ab-30e8-409f-a68d-e039f21f9fc7",
@@ -9268,10 +9019,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Entry",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -9281,7 +9028,8 @@
               "su": 8,
               "sv": 8
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "db027b07-9890-4b70-9115-e6c39a94c689",
@@ -9424,10 +9172,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Pit",
-          "bgColor": 8,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 1,
           "ry": 2,
@@ -9441,7 +9185,8 @@
               "su": 3,
               "sv": 7
             }
-          ]
+          ],
+          "a8Bg": 38
         },
         {
           "id": "70907202-8609-47a6-9087-7d3e403ad2ba",
@@ -9489,10 +9234,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Junction",
-          "bgColor": 9,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 0,
@@ -9502,7 +9243,8 @@
               "su": 23,
               "sv": 12
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "8bc20bc6-31c4-447a-b704-83139de2f86a",
@@ -9570,10 +9312,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Stacks",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "T",
           "rx": 0,
           "ry": 1,
@@ -9587,7 +9325,8 @@
               "su": 4,
               "sv": 9
             }
-          ]
+          ],
+          "a8Bg": 6
         },
         {
           "id": "2e2443cc-fa22-4123-b820-799282dd01cf",
@@ -9664,15 +9403,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Upper Stacks",
-          "bgColor": 12,
-          "lineColor": 15,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 8
         },
         {
           "id": "aaa855b7-97b7-401b-b8b9-28834c924d09",
@@ -9812,10 +9548,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Crusher",
-          "bgColor": 0,
-          "lineColor": 2,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "T",
           "rx": 0,
           "ry": 0,
@@ -9829,7 +9561,8 @@
               "su": 20,
               "sv": 9
             }
-          ]
+          ],
+          "a8Bg": 4
         },
         {
           "id": "2be51bc1-d1bc-4e21-a7da-1441d21745d9",
@@ -9864,15 +9597,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Elevator",
-          "bgColor": 0,
-          "lineColor": 11,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 4
         },
         {
           "id": "61ac82a4-4dae-4fbd-a205-f370d18cbeec",
@@ -10035,10 +9765,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Dark",
-          "bgColor": 0,
-          "lineColor": 4,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -10048,7 +9774,8 @@
               "su": 9,
               "sv": 3
             }
-          ]
+          ],
+          "a8Bg": 4
         },
         {
           "id": "76098419-8f37-415c-b9b6-17581d88b32a",
@@ -10083,10 +9810,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Lava Pit",
-          "bgColor": 4,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 2,
@@ -10096,7 +9819,8 @@
               "su": 8,
               "sv": 26
             }
-          ]
+          ],
+          "a8Bg": 100
         },
         {
           "id": "b05b20c4-276a-4a7e-95cc-b1f16b3635ce",
@@ -10216,15 +9940,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Maintenance",
-          "bgColor": 6,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 132
         },
         {
           "id": "cc2bdfb3-0e95-46bc-943b-bfe59ce0b81e",
@@ -10254,15 +9975,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Teleport",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "d1ff0b41-fce2-4dfc-aef6-badd2af6dc62",
@@ -10325,10 +10043,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Boss",
-          "bgColor": 6,
-          "lineColor": 1,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "L",
           "rx": 0,
           "ry": 3,
@@ -10338,7 +10052,8 @@
               "su": 39,
               "sv": 24
             }
-          ]
+          ],
+          "a8Bg": 132
         },
         {
           "id": "8fc5927d-6cc8-44ce-b9a9-7cdd79e3d7de",
@@ -10789,15 +10504,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Quad Cache",
-          "bgColor": 11,
-          "lineColor": 12,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "b7c738bf-6950-462b-a120-3e487f792181",
@@ -10849,10 +10561,6 @@
           "axis": "z",
           "dir": 1,
           "name": "Lava Pit",
-          "bgColor": 9,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 15,
           "shape": "T",
           "rx": 0,
           "ry": 1,
@@ -10866,7 +10574,8 @@
               "su": 11,
               "sv": 17
             }
-          ]
+          ],
+          "a8Bg": 36
         },
         {
           "id": "80880b9a-4c27-42b7-9ad8-e5bd7ce99f43",
@@ -10901,15 +10610,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Entry",
-          "bgColor": 2,
-          "lineColor": 10,
-          "fxColor": 1,
-          "weaponColor": 0,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 66
         },
         {
           "id": "adfa7fe8-4ed4-45ed-9abd-bd87c7095f9e",
@@ -11061,15 +10767,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Left",
-          "bgColor": 11,
-          "lineColor": 0,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "091a9086-6d15-46cb-8130-d2cef0ed1eae",
@@ -11084,15 +10787,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Right",
-          "bgColor": 11,
-          "lineColor": 0,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 6
         },
         {
           "id": "fc7c4ccd-058b-49f1-95f1-e6c9a9b36c60",
@@ -11107,15 +10807,12 @@
           "axis": "z",
           "dir": 1,
           "name": "Back",
-          "bgColor": 0,
-          "lineColor": 7,
-          "fxColor": 1,
-          "weaponColor": 12,
           "shape": "box",
           "rx": 0,
           "ry": 0,
           "rz": 0,
-          "cuts": []
+          "cuts": [],
+          "a8Bg": 4
         },
         {
           "id": "b104dfae-ddd4-4515-97c0-b1bd90be0f56",

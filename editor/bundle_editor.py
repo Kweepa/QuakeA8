@@ -69,14 +69,14 @@ def main() -> None:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quake64 Editor</title>
+  <title>QuakeA8 Editor</title>
 {favicon_link}  <style>
 {css}
   </style>
 </head>
 <body>
   <header class="toolbar">
-    <h1>Quake64</h1>
+    <h1>QuakeA8</h1>
     <div class="toolbar-actions" role="group" aria-label="Editor mode">
       <button type="button" id="btn-mode-layout" class="active">Maps</button>
       <button type="button" id="btn-mode-anim">Enemies</button>

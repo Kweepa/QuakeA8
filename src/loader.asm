@@ -1,12 +1,11 @@
-; Disk load — maps + enemy poses pack downward from SCR_A ($C000).
-; USE_KRILL=1: loadraw, LOAD_TO_API, no IOINIT. Default: KERNAL SETNAM/SETLFS/LOAD.
+; Disk load — maps + enemy poses pack downward from the heap ceiling.
+; SIO is a8sio.asm. LoadPrg is the only disk entry.
 !zone loader
 
 !source "asset_sizes.asm"
 !source "level_prefix.asm"
 
-; Filenames are 0-terminated (Krill README "Basic operation"; KERNAL SETNAM
-; takes a length computed at the call).
+; Filenames are 0-terminated.
 level_dos_name
 	!text "E1M1"
 	!byte 0
@@ -36,11 +35,8 @@ en_n8	!text "DEMON"
 crush_name
 	!text "CRUSH"
 	!byte 0
-qsave_dos
-	!text "QSAVE"
-	!byte 0
 
-; FormatDosName — E1MN from level_num (1..8); 1541 names are PETSCII A–Z
+; E1MN from level_num (1..8).
 FormatDosName
 	lda #'E'
 	sta level_dos_name
@@ -54,392 +50,105 @@ FormatDosName
 	sta level_dos_name + 3
 	rts
 
-; Play IRQ dead: I=1, CIA1 TA masked+acked, $d01a=0, $01=BANK_IO. Preserves A.
-; C clobbered. irq_entry does not ack CIA1 — this is the only GAME kill.
-; LoadPrg enter/exit, LoadLevel, maybe_stream_room, reboot_game all jsr here.
-; Do not poke $dc0d / $d01a / $0314 from those callers.
+; Play NMI dead for a disk transfer. Preserves A. C clobbered.
+; LoadPrg enter/exit, LoadLevel, maybe_stream_room all jsr here.
 load_irq_off
 	sei
 	pha
-	lda #BANK_IO
-	sta $01
-	lda #$7f
-	sta $dc0d
-	lda $dc0d
+
 	lda #0
-	sta $d01a
+	sta $d40e				; NMI off for the transfer
+
 	pla
 	rts
 
-!if USE_KRILL {
 
-; LoadPrg — THE disk load. X/Y = 0-terminated name. Dest in load_dest.
-; Enter/exit via load_irq_off. Returns I=1, CIA1 off, raster off, C=0 ok.
-; Krill loadraw + LOAD_TO_API: carry SET uses loadaddrlo/hi (PRG header $0000).
-; BANK_LOADER unmaps KERNAL; IRQ would come from $fffe — so play IRQ is dead first.
-LoadPrg
-	stx load_name_l
-	sty load_name_h
-	lda load_dest
-	sta loadaddrlo
-	lda load_dest+1
-	sta loadaddrhi
-	jsr load_irq_off
-	lda #BANK_LOADER
-	sta $01
-	ldx load_name_l
-	ldy load_name_h
-	sec					; carry SET → use loadaddrlo/hi
-	jsr loadraw
-	php
-	lda #BANK_IO
-	sta $01
-	pla
-	lsr
-	pha
-	jsr load_irq_off
-	pla
-	lsr
-	rts
-
-} else {
-
-; LoadPrg — THE disk load. X/Y = 0-terminated name. Dest in load_dest (SA=0).
-; Enter/exit via load_irq_off. Returns I=1, CIA1 off, raster off, C=0 ok.
-; Standard KERNAL SETNAM/SETLFS/LOAD/CLOSE. No IOINIT — boot already did it.
-; $EA31 around CLI+$FFD5 so a spurious IRQ cannot hit irq_entry (no CIA1 ack).
-LoadPrg
-	stx .lp_lda+1
-	sty .lp_lda+2
-	jsr load_irq_off
-	ldy #0
-.lp_lda
-	lda $ffff,y
-	beq .lp_got
-	iny
-	bne .lp_lda
-.lp_got
-	tya
-	ldx .lp_lda+1
-	ldy .lp_lda+2
-	jsr $ffbd				; SETNAM
-	lda #1
-	ldx load_device
-	ldy #0					; SA=0 → load to X/Y of LOAD
-	jsr $ffba				; SETLFS
-	lda $0314
-	pha
-	lda $0315
-	pha
-	lda #<$ea31
-	sta $0314
-	lda #>$ea31
-	sta $0315
-	lda #0
-	ldx load_dest
-	ldy load_dest+1
-	cli					; IEC bitbang / VICE traps
-	jsr $ffd5				; LOAD
-	sei
-	lda #0
-	rol
-	pha
-	jsr load_irq_off			; TA dead before irq_entry restored
-	lda #1
-	jsr $ffc3				; CLOSE
-	pla
-	tay
-	pla
-	sta $0315
-	pla
-	sta $0314
-	jsr mulset_init
-	tya
-	lsr
-	rts
-
-}
-
-!if USE_KRILL = 0 {
-
-; KERNAL SAVE. X/Y = 0-terminated name. load_dest = start, save_end = end
-; (exclusive). Binds load_name_* / load_namelen first — those cells sit inside
-; the QB image, so a later SAVE of that range must bind the same bytes the
-; checksum already saw. Scratch S0:name and drain the error channel (a 1541
-; does not finish the scratch until then). No IOINIT. $EA31 only across CLI.
-; C=0 ok. Returns I=1, CIA1 off, raster off.
-SavePrg
-	jsr save_bind
-	jsr load_irq_off
-	lda $0314
-	pha
-	lda $0315
-	pha
-	lda #<$ea31
-	sta $0314
-	lda #>$ea31
-	sta $0315
-	lda #0
-	sta $98					; open-file count
-	sta $90					; ST
-	sta $9d					; bit7 set → SAVE CHROUTs CR+"SAVING"
-	cli
-	jsr $ffe7				; CLALL
-	jsr SavePrg_scratch
-	bcs .sp_fail
-	lda load_namelen
-	ldx load_name_l
-	ldy load_name_h
-	jsr $ffbd				; SETNAM
-	lda #1
-	ldx load_device
-	ldy #1					; SA=1 → file load address is the start pointer
-	jsr $ffba				; SETLFS
-	lda load_dest
-	sta nlo
-	lda load_dest+1
-	sta nhi
-	ldx save_end
-	ldy save_end+1
-	lda #nlo
-	jsr $ffd8				; SAVE
-	sei
-	lda #0
-	rol
-	pha
-	jsr load_irq_off
-	pla
-	tay
-	pla
-	sta $0315
-	pla
-	sta $0314
-	jsr mulset_init
-	tya
-	lsr
-	cld
-	rts
-.sp_fail
-	jsr load_irq_off
-	pla
-	sta $0315
-	pla
-	sta $0314
-	jsr mulset_init
-	cld
-	sec
-	rts
-
-; X/Y = 0-terminated name → load_name_*, load_namelen. No disk.
-save_bind
-	stx load_name_l
-	sty load_name_h
-	stx .sb_nm+1
-	sty .sb_nm+2
-	ldy #0
-.sb_nm
-	lda $ffff,y
-	beq .sb_got
-	iny
-	bne .sb_nm
-.sb_got
-	sty load_namelen
-	rts
-
-; "S0:" + name at save_cmd. Status digits in nlo/nhi (replaced before SAVE).
-; C=0 for 00/01 (scratched) or 62 (no such file).
-SavePrg_scratch
-	lda load_name_l
-	sta src_ptr
-	lda load_name_h
-	sta src_ptr+1
-	ldy #0
-.sc_cp
-	lda (src_ptr),y
-	sta save_cmd_name,y
-	iny
-	cpy load_namelen
-	bcc .sc_cp
-	lda load_namelen
-	clc
-	adc #3
-	ldx #<save_cmd
-	ldy #>save_cmd
-	jsr $ffbd
-	lda #15
-	ldx load_device
-	ldy #15
-	jsr $ffba
-	jsr $ffc0				; OPEN
-	bcs .sc_err
-	ldx #15
-	jsr $ffc6				; CHKIN
-	bcs .sc_close
-	jsr $ffcf
-	sta nlo
-	jsr $ffcf
-	sta nhi
-.sc_drain
-	jsr $ffcf
-	cmp #$0d
-	beq .sc_shut
-	lda $90
-	beq .sc_drain
-.sc_shut
-	jsr $ffcc				; CLRCHN
-	lda #15
-	jsr $ffc3				; CLOSE
-	lda nlo
-	cmp #'0'				; 00 ok, 01 scratched
-	beq .sc_ok
-	cmp #'6'
-	bne .sc_err
-	lda nhi
-	cmp #'2'				; 62 file not found
-	bne .sc_err
-.sc_ok
-	clc
-	rts
-.sc_close
-	jsr $ffcc
-	lda #15
-	jsr $ffc3
-.sc_err
-	sec
-	rts
-
-save_cmd
-	!text "S0:"
-save_cmd_name
-	!text "XX"
-
-}
-
+; DMA off. a8_vbi keeps it off while den_arm == 1.
 blank_screen
 	lda #0
-	sta $d015
-	sta $d020
-	sta $d021
+	sta $d400
 	rts
 
-; Top of main. Latches are OR'd by the raster IRQ. F5 wins over F7.
-; Loads QSAVE over screen A ($C000) and calls it. DEN stays off until the
-; next published frame (den_arm). C is unused; always returns to the draw.
+
+; Shift-S / Shift-L. a8_keys latches one per press. The QSAVE overlay (a8qsave.asm)
+; is loaded over bitmap A with the view blanked, then the span is zeroed and the
+; view stays dark until main publishes a frame (den_arm 1 -> 2). A save leaves the
+; game alone. A load runs the overlay's verify, rebuilds the map with
+; restart_level, then reloads the overlay to restore the state on top of it.
+qs_name		!text "QSAVE"
+		!byte 0
+
 poll_quick_keys
-	sei
-!if USE_KRILL = 0 {
-	lda in_qsave
-	beq .pq_load
-	lda #0
-	sta qs_cmd
-	beq .pq_take
-.pq_load
-}
 	lda in_qload
-	beq .pq_none
-	lda #1
-	sta qs_cmd
-.pq_take
+	bne .pq_load
+	lda in_qsave
+	beq .pq_rts
 	lda #0
 	sta in_qsave
-	sta in_qload
-	jsr load_irq_off
-	jsr blank_screen
-	lda $d011
-	and #%11101111				; DEN off while the saver owns the matrix
-	sta $d011
-	lda #<SCR_A
-	sta load_dest
-	lda #>SCR_A
-	sta load_dest+1
-	ldx #<qsave_dos
-	ldy #>qsave_dos
-	jsr LoadPrg
-	bcs .pq_noload
-	jsr SCR_A				; overlay resumes HUD, then overwrites itself
-	bcc .pq_unlatch
-	cmp #QS_FAIL_SALVAGE
-	beq .pq_salvage
-	jsr qs_red
-.pq_unlatch
-	jmp qs_unlatch
-.pq_none
+	lda player_hp
+	beq .pq_rts				; dead: nothing to save
+	jsr .pq_blank
+	lda #0					; QSO_SAVE
+	jsr qs_call
+	jmp .pq_end
+.pq_load
 	lda #0
-	sta in_qsave				; Krill disk has no save; drop a stale F5
-	cli
-	rts
-; QSAVE never arrived, so the overlay's exit never ran. LOAD writes the
-; destination as it goes; put the template back and reopen the raster.
-.pq_noload
-	jsr qs_restore_view
-	lda #BANK_IO
-	sta $01
-	jsr init_hud
-	jsr hud_ammo
-	lda #1
-	sta den_arm
-	jsr init_irq
-	jsr qs_red
-	jmp qs_unlatch
-.pq_salvage
+	sta in_qload
+	jsr .pq_blank
+	lda #1					; QSO_VERIFY (sets level_num)
+	jsr qs_call
+	bcs .pq_end
 	jsr restart_level
 	bcs .pq_hang
-	jsr qs_red
-	jmp qs_unlatch
+	lda #2					; QSO_RESTORE
+	jsr qs_call
+.pq_end
+	lda #<QS_OVL
+	sta dst_ptr
+	lda #>QS_OVL
+	sta dst_ptr+1
+	lda #0
+	tay
+.pq_wipe
+	sta (dst_ptr),y
+	iny
+	bne .pq_wipe
+	inc dst_ptr+1
+	ldx dst_ptr+1
+	cpx #$d0
+	bcc .pq_wipe
+	jsr maybe_stream_room			; the restored room's enemy banks
+	jmp a8_nmi_on
 .pq_hang
 	jmp load_fail_hang
-
-; Matrix B's viewport is the scr.prg pattern. Used when the overlay is not
-; in RAM. The success path restores from inside QSAVE instead.
-qs_restore_view
-	ldx #0
-.qrv
-	lda SCR_B + VIEW_ROW * 40,x
-	sta SCR_A + VIEW_ROW * 40,x
-	lda SCR_B + VIEW_ROW * 40 + $100,x
-	sta SCR_A + VIEW_ROW * 40 + $100,x
-	inx
-	bne .qrv
-	ldx #0
-.qrv2
-	lda SCR_B + VIEW_ROW * 40 + $200,x
-	sta SCR_A + VIEW_ROW * 40 + $200,x
-	inx
-	cpx #VIEW_H * 40 - $200
-	bne .qrv2
+.pq_blank
+	jsr blank_screen
+	lda #1
+	sta den_arm
+.pq_rts
 	rts
 
-qs_red
-	lda #BANK_IO
-	sta $01
-	lda #COL_HURT
-	sta vic_border
-	sta $d020
+; A = overlay command. Loads QSAVE at QS_OVL and jumps in; its C comes back.
+qs_call
+	pha
+	lda #<QS_OVL
+	sta load_dest
+	lda #>QS_OVL
+	sta load_dest+1
+	ldx #<qs_name
+	ldy #>qs_name
+	jsr LoadPrg
+	pla
+	bcs .qc_rts
+	jmp QS_OVL
+.qc_rts
 	rts
 
-; Key is still down after a multi-second disk op. Poll with the raster
-; off: the IRQ also writes $dc00, and it re-latches F5 the moment it runs.
-; I stays 1 from load_irq_off until the key is up.
-qs_unlatch
-	lda #BANK_IO
-	sta $01
-.qu
-	lda #$fe
-	sta $dc00
-	lda $dc01
-	and #$48				; F5 | F7, active low
-	cmp #$48
-	bne .qu
-	lda #0
-	sta in_qsave
-	sta in_qload
-	lda #BANK_RAM
-	sta $01
-	cld
-	cli
-	rts
+!if QS_OVL & $ff {
+	!error "QS_OVL must be page aligned (the wipe starts at Y=0)"
+}
 
-; Fill frame13_lo/hi[i] = i*13 (pose gx/gy/gz stride). Called each LoadLevel.
+; Fill frame13_lo/hi[i] = i*13 (pose stride). Called each LoadLevel.
 init_frame13
 	ldx #0
 	lda #0
@@ -495,38 +204,17 @@ heap_alloc
 ; load_in_play=0: cold. =1: in-play. C=0 ok, C=1 error. Caller re-inits VIC/IRQ.
 LoadLevel
 	jsr load_irq_off			; play IRQ dead before any disk
-!if USE_KRILL {
-	; NO jsr $ff84. KERNAL IOINIT writes $DD02 = $3F, which is Krill's
-	; uninstall signal — the drive-side code tears itself down and the
-	; next loadraw hangs forever.
-	; Interrupts stay off for the whole load: LoadPrg banks the KERNAL out.
-	lda load_in_play
-	beq .ll_cold
-	jsr init_vic				; DEN stays off through the map load
-	jmp .ll_common
-.ll_cold
+
 	jsr blank_screen
-	lda $d011
-	and #%11101111				; DEN off
-	sta $d011
-	jmp .ll_dos
-.ll_common
-	jsr blank_screen
-} else {
-	; LoadPrg owns SETNAM/SETLFS/LOAD/CLOSE under load_irq_off.
-	jsr blank_screen
-	lda $d011
-	and #%11101111				; DEN off through the map load
-	sta $d011
 	lda #1
 	sta den_arm
-}
+	jmp .ll_dos
+
 .ll_dos
-	lda #BANK_IO
-	sta $01
-	lda #<SCR_A
+
+	lda #<HEAP_LIM
 	sta heap_top
-	lda #>SCR_A
+	lda #>HEAP_LIM
 	sta heap_top+1
 	jsr init_frame13
 
@@ -799,46 +487,15 @@ maybe_stream_room
 	jsr collect_room_need
 	jsr room_need_resident
 	bcc .msr_mark
-	php
-	lda $01
-	pha
+
 	jsr load_irq_off
-	lda #1
-	sta $d019
-	lda #1
-	sta den_arm				; hold off; cancel a pending arm
-	lda #COL_BORDER
-	sta $d020
-	lda $d011
-	and #%11101111				; DEN off: badlines stall IEC
-	sta $d011
-	lda #0
-	sta col_bg
-	sta col_line
-	jsr fill_viewport_colour
-	lda #0
-	sta $d021
 	jsr stream_room_enemies
 	bcs .msr_fail
 	jsr apply_room_palette
-	jsr fill_viewport_colour
-	lda col_bg
-	sta $d021
-	jsr install_irq_vectors
-	lda #0
-	sta irq_phase
-	lda #RASTER_VIEW
-	sta $d012
-	lda $d011
-	and #$7f
-	sta $d011
-	jsr load_irq_off
-	lda #1
-	sta $d019
-	sta $d01a
-	pla
-	sta $01
-	plp
+	jsr setup_weapon
+	jsr a8_nmi_on
+	jmp .msr_mark
+
 .msr_mark
 	lda room_idx
 	sta stream_room
@@ -1587,8 +1244,10 @@ restart_level
 ; Play bring-up shared by start and restart_level. I=1 on return.
 play_up1
 	sei
-	lda #BANK_IO
-	sta $01
+
+	lda #$fe
+	sta $d301
+
 	jsr game_zp_init
 	jsr line_tab_init
 	jsr fill_colour
@@ -1599,22 +1258,19 @@ play_up1
 
 ; Charsets, HUD, world. Ends with CLI (room_idx valid: pulls its poses).
 play_up2
-	lda #BANK_RAM				; all RAM; I/O only in IRQ
-	sta $01
-	jsr clear_charsets
-	jsr fill_margin_glyph
-	lda #BANK_IO				; colour RAM + HUD after charset wipe
-	sta $01
+
 	jsr init_hud
 	jsr hud_ammo
 	jsr hud_powerup
-	lda #BANK_RAM
-	sta $01
 	jsr mulset_init
 	jsr world_init
 	jsr maybe_stream_room
-	cli
+	jsr init_hud
+	jsr hud_ammo
+	jsr hud_powerup
+	jsr a8_nmi_on
 	rts
+
 
 ; TRIG_END: next e1mN, or episode done → menu endings.
 next_level
@@ -1646,49 +1302,14 @@ install_reboot_stub
 
 ; Reload boot (quake64) and re-enter menu.
 reboot_game
-	ldx #$ff
-	txs
-	jsr load_irq_off
-	lda #<$ea31
-	sta $0314
-	lda #>$ea31
-	sta $0315
-	; DELIBERATE on the Krill disk, and the only surviving IOINIT. $DD02 = $3F
-	; uninstalls the drive code and hands the drive back to normal DOS, which
-	; is exactly what the KERNAL LOAD below needs. splashc re-installs on the
-	; Krill disk; the KERNAL disk never had drive code up.
-	; $EA31 first: irq_entry does not ack CIA1 TA that IOINIT restarts.
-	jsr $ff84
-	lda $d011
-	and #%11101111
-	sta $d011
-	lda #0
-	sta $d015
-	sta $d020
-	sta $d021
-	lda #7
-	ldx #< .rg_name
-	ldy #> .rg_name
-	jsr $ffbd
-	lda #1
-	ldx load_device
-	ldy #1
-	jsr $ffba
-	lda #0
-	cli
-	jsr $ffd5
-	bcs .rg_hang
-	jmp $080d
-.rg_hang
-	jmp .rg_hang
-.rg_name
-	!text "QUAKE64"
+
+	jmp a8_reboot_menu
+
 
 load_fail_hang
-	lda #BANK_IO
-	sta $01
-	jsr init_vic
-	lda #2					; red border
-	sta $d020
+
+	lda #$42
+	sta $d01a
+
 .lfh
 	jmp .lfh

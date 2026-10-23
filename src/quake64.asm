@@ -1,5 +1,8 @@
 ; Quake64 — portal-room maps + enemy poses loaded from disk
-!cpu 6510
+
+
+!cpu 6502
+
 !to "game.prg", cbm
 
 !source "build_flags.asm"
@@ -8,19 +11,22 @@
 !source "zp.asm"
 !source "map_counts.asm"
 !source "mapacc.asm"
-!if ENEMY_PTR_N != ENEMY_NTYPES {
+!if  ENEMY_PTR_N != ENEMY_NTYPES {
 	!error "mem.asm ENEMY_PTR_N must equal ENEMY_NTYPES"
 }
 
 *= LOCODE_BASE
-mod_quake64
+mod_quake
 start
 	sei
 	cld
 	ldx #$ff
 	txs
-	lda #BANK_IO				; I/O + KERNAL, BASIC out (SEI)
-	sta $01
+
+	lda #$fe				; bit 0 clear: RAM under the OS
+	sta $d301
+	jsr a8_bind_tabs
+
 
 	lda #0
 	sta load_in_play
@@ -42,9 +48,9 @@ start
 	jsr play_up2
 
 main
-	jsr poll_quick_keys			; F5 save / F7 load; screen redraws after
+	jsr poll_quick_keys			; Shift-S save / Shift-L load; view stays blank until the next frame
 	cld
-!if PROFILE = 1 {
+!if  PROFILE = 1 {
 	jsr prof_reset_frame
 } else {
 	lda #$ff
@@ -52,7 +58,7 @@ main
 }
 	jsr wait_draw_free
 	jsr clear_draw
-!if PROFILE = 1 {
+!if  PROFILE = 1 {
 	ldy #PROF_CLEAR
 	jsr prof_add_bucket
 }
@@ -60,6 +66,9 @@ main
 	jsr draw_enemies
 	jsr draw_grenades
 	jsr draw_explosion
+
+	jsr stamp_view
+
 
 	lda draw_buf
 	sta show_buf
@@ -75,7 +84,6 @@ main
 	jsr update_hurt_flash
 	jsr update_powerup
 	jsr update_item_spin
-	jsr hud_print
 
 	lda draw_buf
 	eor #1
@@ -97,12 +105,21 @@ main
 	jsr update_triggers
 	jsr update_chthon_elec
 	jsr enemies_update
+!if  PROFILE = 1 {
+	ldy #PROF_UPDATE
+	jsr prof_add_bucket
+}
+	jsr hud_print
 	jmp main
 
 mod_vic
-!source "vic.asm"
+
+!source "a8vic.asm"
+
 mod_irq
-!source "irq.asm"
+
+!source "a8irq.asm"
+
 mod_profil
 !source "profil.asm"
 mod_hud
@@ -112,7 +129,9 @@ mod_math
 mod_util
 !source "util.asm"
 mod_line
-!source "line.asm"
+
+!source "a8line.asm"
+
 mod_fx
 !source "fx.asm"
 mod_grenade
@@ -123,6 +142,9 @@ mod_pcsounds
 !source "pcsounds.asm"
 mod_weapon
 !source "weapon.asm"
+
+!source "a8stamp.asm"
+
 mod_weapon_spr
 !source "weapon_spr.asm"
 mod_splat_spr
@@ -152,9 +174,14 @@ mod_cheats
 mod_loader
 !source "loader.asm"
 
+!source "a8sio.asm"
+!source "a8tabs.asm"
+!source "a8reboot.asm"
+
+
 !source "map_bss.asm"
 
-!if PROFILE = 1 {
+!if  PROFILE = 1 {
 casc_snap
 	!fill 4, 0
 prof_dt
@@ -172,6 +199,15 @@ nv_clip
 }
 
 end_game = *
-!if end_game > SCR_A {
+!if  end_game > HEAP_LIM {
 	!error "game overlaps screen A at $C000; end=$", end_game
 }
+
+	!if  end_game > TAB_STAGE {
+		!error "game overlaps tab staging; end=$", end_game
+	}
+	; heap_alloc fails when end_game >= HEAP_LIM-(map+prefix). E1M1 map is 2373.
+	!if  end_game + LEVEL_PREFIX + 2373 >= HEAP_LIM {
+		!error "game overlaps e1m1 heap; end=$", end_game
+	}
+

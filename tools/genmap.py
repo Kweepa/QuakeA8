@@ -45,23 +45,25 @@ BP_MAX = 32
 FACE = {"+z": 0, "-z": 1, "+x": 2, "-x": 3}
 # Width × height × thickness; keep in sync with editor/js/model.js doorSizeForScale.
 DOOR_SIZE_BY_SCALE = {1: (4, 5, 1), 1.5: (6, 8, 1), 2: (8, 10, 1)}
-ROOM_BG_DEFAULT = 9
-ROOM_LINE_DEFAULT = 7
-ROOM_FX_DEFAULT = 1
-ROOM_WPN_DEFAULT = 0
-ROOM_SKY_DEFAULT = ROOM_BG_DEFAULT  # legacy alias
+# Room colour is one Atari byte (hue<<4 | lum, bit 0 unused) written by the editor
+# as "a8Bg"; keep in sync with editor/js/model.js normalizeBg.
+ROOM_BG_DEFAULT = 0x24  # brown
+ROOM_BG_GREY_DARK = 0x04
+ROOM_BG_GREY_LIGHT = 0x0A
 
 
-def norm_color(val, default: int) -> int:
-    if isinstance(val, int) and 0 <= val <= 15:
-        return val
+def norm_bg(val) -> int:
+    """A8 paper byte. Black / white paper (ink == paper, or black gutters) → grey."""
     try:
-        n = int(val)
-        if 0 <= n <= 15:
-            return n
+        b = int(val) & 0xFE
     except (TypeError, ValueError):
-        pass
-    return default
+        return ROOM_BG_DEFAULT
+    if b & 0xF0 == 0:
+        if b < 0x04:
+            return ROOM_BG_GREY_DARK
+        if b >= 0x0E:
+            return ROOM_BG_GREY_LIGHT
+    return b
 
 
 def clamp_door_scale(val) -> float:
@@ -537,12 +539,7 @@ def cook_one(level: dict, map_key: str) -> bytes:
     room_sx = [r["sx"] for r in rooms]
     room_sy = [r["sy"] for r in rooms]
     room_sz = [r["sz"] for r in rooms]
-    room_bg = [
-        norm_color(r.get("bgColor", r.get("skyColor")), ROOM_BG_DEFAULT) for r in rooms
-    ]
-    room_line = [norm_color(r.get("lineColor"), ROOM_LINE_DEFAULT) for r in rooms]
-    room_fx = [norm_color(r.get("fxColor"), ROOM_FX_DEFAULT) for r in rooms]
-    room_wpn = [norm_color(r.get("weaponColor"), ROOM_WPN_DEFAULT) for r in rooms]
+    room_bg = [norm_bg(r["a8Bg"]) if "a8Bg" in r else ROOM_BG_DEFAULT for r in rooms]
     room_id = [map_id[id(r)] for r in rooms]
 
     col_x: list[int] = []
@@ -1104,9 +1101,6 @@ def cook_one(level: dict, map_key: str) -> bytes:
     add(room_sy)
     add(room_sz)
     add(room_bg)
-    add(room_line)
-    add(room_fx)
-    add(room_wpn)
     add(col_x)
     add(col_y)
     add(col_z)

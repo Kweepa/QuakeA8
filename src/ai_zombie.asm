@@ -1,5 +1,5 @@
 ; Streamed Zombie chase / flesh-throw / knockdown. Linked at AI_LINK_BASE.
-!cpu 6510
+!cpu 6502
 !to "../enemies/ai_zombie.bin", plain
 !source "mem.asm"
 !source "zp.asm"

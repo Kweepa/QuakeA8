@@ -14,7 +14,7 @@ SRC = ROOT / "src"
 
 MAP_FIELDS = {
     "room_x", "room_y", "room_z", "room_sx", "room_sy", "room_sz",
-    "room_bg", "room_line", "room_fx", "room_wpn", "room_id",
+    "room_bg", "room_id",
     "rc_x", "rc_y", "rc_z", "rc_sx", "rc_sy", "rc_sz",
     "rb_x", "rb_y", "rb_z", "rb_sx", "rb_sy", "rb_sz",
     "room_nv", "room_ne", "room_vo", "room_eo", "room_nx", "room_nz",
@@ -76,7 +76,7 @@ CPX_N = re.compile(
 
 FILES = [
     "world.asm", "mesh.asm", "door.asm", "enemy.asm", "cube.asm",
-    "elevator.asm", "process.asm", "hud.asm", "util.asm", "vic.asm",
+    "elevator.asm", "process.asm", "hud.asm", "util.asm", "a8vic.asm",
 ]
 
 

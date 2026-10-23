@@ -2,20 +2,20 @@
 ; credits.txt / readthis.txt / ending.txt pages split on lines that are only '^'
 
 control_text
-	!scr "^WASD....^ Forward/backward/strafe",0
-	!scr "^JL......^ Turn",0
-	!scr "^Space...^ Fire",0
-	!scr "^K.......^ Use switch (triangle)",0
-	!scr "^1234....^ Change weapon",0
-	!scr "^F5......^ Quick save (non-krill)",0
-	!scr "^F7......^ Quick load",0
+	!scr "^Joystick...^ Move and shoot",0
+	!scr "^Btn 2......^ Strafe",0
+	!scr "^1234.......^ Change weapon",0
+	!scr "^Shift-S....^ Quick save",0
+	!scr "^Shift-L....^ Quick load",0
 	!scr " ",0
-	!scr "If you have a mouse in port 1 and",0
-	!scr "you have enabled it in the options,",0
-	!scr "you can turn and shoot with it.",0
+	!scr "If you have an ST mouse in port 2",0
+	!scr "and you have enabled it in the",0
+	!scr "options, you can turn and shoot with",0
+	!scr "it. The joystick then strafes.",0
 	!scr " ",0
 	!scr "Walk into doors to open them.",0
 	!scr "Walk over items to pick them up.",0
+	!scr "Walk into switches to activate them.",0
 	!scr "Some switches must be shot.",0
 	!byte 0
 
@@ -36,7 +36,7 @@ credits1_text
 	!scr "Quake is a trademark of",0
 	!scr "id software llc/zenimax media inc.",0
 	!scr " ",0
-	!scr "Unofficial commodore 64 fan port",0
+	!scr "Unofficial atari 8-bit fan port",0
 	!scr "created by steve mccrea in 2026.",0
 	!scr " ",0
 	!scr "Not affiliated with or endorsed",0
@@ -56,15 +56,13 @@ credits2_text
 	!byte 0
 
 credits3_text
-	!scr "Line draw routine by michael kircher.",0
-	!scr "music by mandy kane.",0
-	!scr "loader by krill/plush.",0
-	!scr "loader integration by chris masiero.",0
-	!scr "title screen by paul docherty.",0
+	!scr "Original music by mandy kane,",0
+	!scr "butchered by an automatic sid to",0
+	!scr "pokey translation.",0
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0
-	!scr "Quake64 v1.00.0, built 17 Oct 2026",0
+	!scr "QuakeA8 v1.00.0, built 22 Oct 2026",0
 	!byte 0
 
 credits_lo
@@ -78,15 +76,15 @@ readthis1_text
 	!scr "You get the phone call at 0400.",0
 	!scr "the commander explains: \"it's about",0
 	!scr "the slipgate devices. once we perfect",0
-	!scr "them, we'll be able to transport people",0
-	!scr "and cargo instantly.",0
+	!scr "them, we'll be able to transport",0
+	!scr "people and cargo instantly.",0
 	!byte 0
 
 readthis2_text
-	!scr "\"An enemy codenamed quake is using his",0
-	!scr "own slipgates to drop death squads",0
-	!scr "inside our bases to plunder, kidnap,",0
-	!scr "and kill.",0
+	!scr "\"An enemy codenamed quake is using",0
+	!scr "his own slipgates to drop death",0
+	!scr "squads inside our bases to plunder,",0
+	!scr "kidnap, and kill.",0
 	!byte 0
 
 readthis3_text
@@ -99,32 +97,34 @@ readthis3_text
 	!byte 0
 
 readthis4_text
-	!scr "\"You're our best man. this is operation",0
-	!scr "counterstrike and you're in charge.",0
-	!scr "find quake, and stop him... or it...",0
-	!scr "you have full authority to requisition",0
-	!scr "anything you need. if the eggheads are",0
-	!scr "right, all our lives are expendable.\"",0
+	!scr "\"You're our best man. this is",0
+	!scr "operation counterstrike and you're in",0
+	!scr "charge. find quake, and stop him...",0
+	!scr "or it... you have full authority to",0
+	!scr "requisition anything you need. if the",0
+	!scr "eggheads are right, all our lives are",0
+	!scr "expendable.\"",0
 	!byte 0
 
 readthis5_text
 	!scr "Prelude To Destruction",0
 	!scr " ",0
-	!scr "As you approach the base, you hear shots.",0
-	!scr "damn, that quake bastard works fast!",0
-	!scr "he heard about operation counterstrike,",0
-	!scr "and hit first. the place is overrun.",0
-	!scr "operation counterstrike has been wiped",0
-	!scr "out. except for you.",0
+	!scr "As you approach the base, you hear",0
+	!scr "shots. damn, that quake bastard works",0
+	!scr "fast! he heard about operation",0
+	!scr "counterstrike, and hit first. the",0
+	!scr "place is overrun. operation",0
+	!scr "counterstrike has been wiped out.",0
+	!scr "except for you.",0
 	!byte 0
 
 readthis6_text
 	!scr "The heart of the installation holds a",0
 	!scr "slipgate. since quake's killers came",0
-	!scr "through, it's paired with his dimension.",0
-	!scr "maybe you can get to the asshole",0
-	!scr "personally. you pump a round into your",0
-	!scr "shotgun, and get moving.",0
+	!scr "through, it's paired with his",0
+	!scr "dimension. maybe you can get to the",0
+	!scr "asshole personally. you pump a round",0
+	!scr "into your shotgun, and get moving.",0
 	!byte 0
 
 readthis_lo
@@ -139,8 +139,8 @@ ending1_text
 	!scr " ",0
 	!scr "As the corpse of the monstrous entity",0
 	!scr "chthon sinks back into the lava whence",0
-	!scr "it rose, you grip the rune of earth magic",0
-	!scr "tightly.",0
+	!scr "it rose, you grip the rune of earth",0
+	!scr "magic tightly.",0
 	!byte 0
 
 ending2_text

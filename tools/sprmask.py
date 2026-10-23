@@ -41,6 +41,21 @@ def unpack_zeromask(packed: list[int]) -> list[int]:
     return out
 
 
+def pack_mode_e(pix: list[list[int]]) -> list[int]:
+    """21 rows × 3 bytes. 24 hires → 12 colour columns, phase 0. Ink %11."""
+    out: list[int] = []
+    for y in range(SH):
+        row = [0, 0, 0]
+        for px in range(SW):
+            if not pix[y][px]:
+                continue
+            fat = px >> 1
+            pair = 3 << ((3 - (fat & 3)) * 2)
+            row[fat >> 2] |= pair
+        out.extend(row)
+    return out
+
+
 def pack_24x21(pix: list[list[int]]) -> list[int]:
     out = [0] * CELL
     for y in range(SH):

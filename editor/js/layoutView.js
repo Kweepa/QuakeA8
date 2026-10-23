@@ -1,9 +1,9 @@
 import {
   KINDS,
   ROOM_BG_DEFAULT,
-  ROOM_LINE_DEFAULT,
   aabbCenter,
-  colorHex,
+  a8Hex,
+  a8InkHex,
   clampObject,
   objectVisible,
   activeMap,
@@ -1372,7 +1372,7 @@ export class LayoutView {
     }
     if (!faces.length) return;
     faces.sort((a, b) => b.z - a.z);
-    ctx.fillStyle = hexAlpha(colorHex(obj.bgColor ?? ROOM_BG_DEFAULT), 0.4);
+    ctx.fillStyle = hexAlpha(a8Hex(obj.a8Bg ?? ROOM_BG_DEFAULT), 0.4);
     for (const face of faces) {
       ctx.beginPath();
       ctx.moveTo(face.pts[0].sx, face.pts[0].sy);
@@ -1420,7 +1420,7 @@ export class LayoutView {
     const color = highlight
       ? "#f2d36b"
       : obj.kind === "room"
-        ? colorHex(obj.lineColor ?? ROOM_LINE_DEFAULT)
+        ? a8InkHex(obj.a8Bg ?? ROOM_BG_DEFAULT)
         : obj.kind === "spawn" && !obj.enabled
           ? "#1a7a3c"
           : KINDS[obj.kind].color;

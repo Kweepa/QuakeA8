@@ -76,6 +76,11 @@ REQUIRED = [
     "elev_noise_off",
     "kill_enemy",
     "spawn_death_drop",
+    # Line-body pixel sites (lda (colptr),y / ora #m). Chthon patches the opcode at +2.
+    "esd0", "esd1", "esd2", "esd3",
+    "esu0", "esu1", "esu2", "esu3",
+    "etd0", "etd1", "etd2", "etd3",
+    "etu0", "etu1", "etu2", "etu3",
 ]
 
 

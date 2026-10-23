@@ -1,106 +1,33 @@
-; VIC Bank 3 layout — see memorymap.md
-; $C000 screen A  $C400 screen B  $C800 weapon sprites
-; $CA00 projected verts / clip / game scratch (not displayed)
-; $D000/$D800 charset A top/bot  $E000/$E800 charset B top/bot
-; Viewport uses charset cols 0–23; col 24 (char 192) is $FF×8 margins.
-; Tails (cols 24–31) hold unique log/sin/invz LUTs — not mirrored.
-; $F000 Judd sqlo..negsqhi (disk sqt). $F800 UI charset (disk fnt).
-; Game PRG $0900–<$C000. Heap grows down from $C000 (map with bind/reloc prefix, poses).
-; $FFFA–$FFFF overlay unused UI char 255 (init_irq).
-;
-; Boot $0801: koala cover (splashc/splash), then menu overlay, then game at $0900.
-; Survives GAME load: rb_n $08F5-$08F6, reboot stub $08F9, level_num $08FC,
-; selectors $08FD–$08FF, mouse_en at $cd (not the play hole under rb_n —
-; boot still owns that while the menu runs).
-; $01: $30 = 64K RAM (game / copy_tab). $36 = I/O + KERNAL, BASIC out (init/IRQ).
-; $34 is not I/O — PLA gives RAM at $D000 when LORAM=HIRAM=0.
-BANK_RAM	= $30
-BANK_IO		= $36
-; $35 = I/O in, KERNAL ROM out. Needed to execute the Krill resident, which
-; lives at $EE08 under the KERNAL. BASIC comes in at $A000 as a side effect;
-; harmless, the loader only writes to the destination. MUST be entered under
-; SEI — with the KERNAL out the IRQ vector comes from RAM at $FFFE.
-BANK_LOADER	= $35
-
-; --- Krill fastloader (v194, LOAD_TO_API=1, UNINSTALL_API=0) ---------------
-; Resident lives in the 248-byte gap between the charset B bottom margin glyph
-; ($EE00-$EE07, written by copy_tab) and LOGTAB ($EF00). 236 B, 12 B spare.
-; -DUSE_KRILL=1: loadraw at $EE08. Default 0: KERNAL LOAD ($FFD5).
-; Play BSS is $CD00–$CFBA. Do not park Krill there; resident is $EE08.
-; see mem.asm's own "$CFBB+ free" below.
-!ifndef USE_KRILL {
-	USE_KRILL = 0
-}
-KRILL_RESIDENT	= $EE08
-KRILL_INSTALL	= $2000			; transient; MENU/GAME overwrite it after use
-!if USE_KRILL {
-	!source "../krill/loadersymbols-c64.inc"
-	!if loadraw != KRILL_RESIDENT {
-		!error "Krill loadraw is not KRILL_RESIDENT $EE08"
-	}
-} else {
-	; Hole reserved on the KERNAL disk; do not alias loadraw.
-	loadaddrlo	= $60
-	loadaddrhi	= $61
-}
-; Krill's zeropage. $60/$61 double as dlo/dhi (line-draw scratch, dead across a
-; load); $60-$64 must not be written while a load is in flight.
+; Atari 800XL play map.
+; Game PRG $0900. Heap grows down from HEAP_LIM. Bitmap A $C000, bitmap B $E000.
+; $D000-$D7FF is I/O. Play state and alog/log sit at $D800-$DFFF, under bitmap B.
+; $F000 sqt, $F800 UI font. a8_bind_tabs copies tab.prg from TAB_STAGE.
+; Survives the GAME load: a8_pal_hue $06D5 (menu), video_ms $08F6, reboot stub
+; $08F9, level_num $08FC, effects_vol/game_complete/difficulty $08FD-$08FF.
+; mouse_en is ZP $cd.
+; Low RAM through RB_CELL is the BSS ceiling (crusher, skeleton, cheats, mouse).
 
 LOADER_BASE	= $0801
 LOCODE_BASE	= $0900			; MENU overlay, then game
-; Mid-split delay count, written by menu rb_calibrate, read by irq rb_delay
-; (rbdelay.asm). lo = first-pass count (0 = 256), hi = number of passes
-; (1..RB_HI_LIM; 0 or above is invalid and init_irq restores the 1 MHz count).
-; n = lo + 256*(hi-1) loop units of 5 CPU cycles.
-; $08F7-$08F8 are near_box_xz scratch (play only; rb_calibrate stores with X=0).
+; $08F6 is video_ms (menu). $08F7-$08F8 are near_box_xz scratch during play.
 RB_CELL		= $08F5
-rb_n_lo		= $08F5
-rb_n_hi		= $08F6
+video_ms	= $08F6			; PAL 20 / NTSC 17, written by a8_music_start
 nb_hi		= $08F7			; exclusive max of the axis under test
 nb_lim		= $08F8			; Chebyshev range passed in A
-RB_HI_LIM	= 8			; n up to 2048
-RB_K_SPLIT	= 3			; 1 MHz mid split: write at poll edge + 48..54
 REBOOT_STUB	= $08F9			; 3-byte JMP reboot_game (installed at start)
-level_num	= $08FC			; 1..8 → e1m1..e1m8
-effects_vol	= $08FD			; menu SFX level 0..15 → SID $d418
+level_num	= $08FC			; 1..8 -> e1m1..e1m8
+effects_vol	= $08FD			; menu SFX level 0..15
 game_complete	= $08FE
 difficulty	= $08FF			; menu skill 0..2 (Flesh / Nails / Nightmare)
-; 1351 Port 1 on/off (menu detect/toggle). Not $38 — GAME uses that for dt_ms,
-; so a flag left there is overwritten every frame and look never runs.
-; Not KERNAL ZP $90–$bf. init_irq / LoadLevel must not clear it.
+; Mouse on/off. Not $38 — GAME uses that for dt_ms.
+; init_irq / LoadLevel must not clear it.
 mouse_en	= $cd
-MENU_COPY_TAB	= LOCODE_BASE + 3
 
-; Menu overlay (VIC bank 1). Unused by the game image.
-; Matrix + sprites pack under bitmap so menu PRG can grow past $4000.
-VIC_BANK1	= $4000
-SCREEN		= $5C00			; colour matrix (was $4000)
-BITMAP		= $6000
-BITMAP_SIZE	= 8000
-BITMAP_END	= BITMAP + BITMAP_SIZE
-; Boot splash: koala split. splashc stages matrix+colour at $4000; do_splash
-; copies matrix → SCREEN and colour → $D800 so MENU can grow past $4000
-; without flashing the cover. Bitmap $6000, same as menu.
-SPLASH_MAT	= VIC_BANK1		; $4000 staging
-SPLASH_COL	= SPLASH_MAT + 1000	; $43E8
-SPLASH_COL_SIZE	= 1000
-SPLASH_BG	= SPLASH_COL + SPLASH_COL_SIZE	; $47D0
-do_splash	= SPLASH_BG + 1		; $47D1 — helpers ride on splashc.prg tail
-KOALA_COL_RAM	= $d800
-KOALA_TAIL	= 1000 - 768		; 232
-!if SPLASH_BG + 1 > BITMAP {
-	!error "splash colour staging overlaps bitmap; bg=$", SPLASH_BG
-}
-
-; Menu music (mus.prg, tools/genmusic.py). Boot loads it before MENU; GAME
-; overwrites it. Voices 1-2 only; menu SFX own voice 3. Player ZP $f0-$f7.
-MUSIC_BASE	= $9000
-MUSIC_INIT	= MUSIC_BASE
-MUSIC_PLAY	= MUSIC_BASE + 3
+; Menu player scratch. The tune itself is in the menu image (a8music.asm).
 MUSIC_ZP	= $f0
 MUSIC_ZP_N	= 8
 
-TAB_STAGING	= $8000			; tab.prg load; copy_tab unpacks tails
+TAB_STAGING	= $8000			; offsets of the tab.prg payload
 TAB_ALOG	= TAB_STAGING		; 512
 TAB_LOG		= TAB_STAGING + 512	; 256
 TAB_SIN		= TAB_STAGING + 768	; 320
@@ -183,6 +110,7 @@ HUD_CH_SP	= $20			; ASCII space / digits / letters in UI charset
 HUD_CH_PLUS	= $2b
 HUD_CH_MINUS	= $2d
 HUD_CH_C	= $43
+HUD_CH_U	= $55
 HUD_CH_R	= $52
 HUD_CH_P	= $50
 HUD_CH_K	= $4b
@@ -211,12 +139,12 @@ negsqhi		= $F600
 ; patches from the map-file reloc prefix. Must not collide with a real GAME abs.
 MAP_SMC_HI	= $02
 MAP_SMC_BASE	= $0200
-!if (>MAP_SMC_BASE) != MAP_SMC_HI {
+!if  (>MAP_SMC_BASE) != MAP_SMC_HI {
 	!error "MAP_SMC_BASE hi must equal MAP_SMC_HI"
 }
 
 ; Play BSS: default VIC matrix / leftover boot. VIC matrix in play is $C000.
-; map_bss.asm occupies $0400–$0523. $08F9–$08FF is reboot stub + selectors.
+; map_bss.asm occupies $0400–$0523. $08F6 video_ms, $08F9–$08FF reboot stub + selectors.
 FRAME13_N	= 106			; offsets 0..105
 ENEMY_PTR_N	= 9			; must == ENEMY_NTYPES (quake64.asm asserts)
 frame13_lo	= $0524
@@ -240,7 +168,11 @@ en_sfx_old	= enemy_sfx_evt_hi + ENEMY_PTR_N	; local frame before this anim step;
 en_sfx_new	= en_sfx_old + 1		; logical frame after the step
 en_sfx_n	= en_sfx_new + 1		; remaining events while scanning
 en_sfx_armed	= en_sfx_n + 1			; 1 = frame changed this anim step
-play_bss_free	= en_sfx_armed + 1		; 44 free, up to ENEMY_DATA_BASE
+play_bss_free	= en_sfx_armed + 1		; up to ENEMY_DATA_BASE
+; Menu set_video_ms copies the PAL hue table here. GAME loads at $0900, so
+; this is still here when a8_to_pal runs. NTSC never reads it.
+a8_pal_hue	= play_bss_free			; 16: NTSC hue → PAL high nibble, lum 0
+a8_hue_lo	= a8_pal_hue + 16		; a8_to_pal luminance scratch
 ; genenemies.py ENEMY_DATA_BASE must match.
 ; Per-type cue ids ride on the pose heap, not here: enemy_sfx_evt_* points at the
 ; 5-byte cue block, and the clip event table follows it (CUE_N bytes in).
@@ -252,8 +184,15 @@ CUE_DEATH	= 4			; generic: kill_enemy
 CUE_N		= 5
 CUE_NONE	= $ff			; $00 is a real sound
 ENEMY_DATA_BASE	= play_bss_free + 44	; boot-loaded enemy_data_blob.asm
-!if ENEMY_DATA_BASE != $0701 {
+!if  ENEMY_DATA_BASE != $0701 {
 	!error "tools/genenemies.py ENEMY_DATA_BASE must be $0701"
+}
+!if  a8_hue_lo >= ENEMY_DATA_BASE {
+	!error "PAL hue table overlaps enemy data"
+}
+; Boot skip_n is $06F0. The reboot stub uses $06F0–$06F3 while loading GAME.
+!if  a8_hue_lo >= $06f0 {
+	!error "PAL hue table hits boot scratch"
 }
 ; Pose prefix copied into one of two resident rows. Offsets match genenemies.py.
 META_STAND_START	= 0
@@ -298,30 +237,44 @@ skel_mul_n	= skel_base_hi + ENEMY_PTR_N
 skel_entry_lo	= skel_mul_n + 1		; streamed draw/lerp entry
 skel_entry_hi	= skel_entry_lo + ENEMY_PTR_N
 SKEL_BSS_END	= skel_entry_hi + ENEMY_PTR_N
-!if CRUSH_BSS_END > RB_CELL {
+!if  CRUSH_BSS_END > RB_CELL {
 	!error "crusher BSS overlaps rb_n cell"
 }
-!if SKEL_BSS_END > RB_CELL {
+!if  SKEL_BSS_END > RB_CELL {
 	!error "skeleton BSS overlaps rb_n cell"
 }
 ; Cassette buffer / $0334-$03FF (204 B): free during play (KERNAL disk LOAD/SAVE
 ; never touches it). Not $02xx (MAP_SMC_HI sentinel), not $0314-$0319 (vectors).
-LINE_TAB	= $0334			; col_lo[32] col_hi[32] vbits[8] = 72 B (line.asm)
+; Atari: $0200-$03F9 is the text matrix and display list, so the line/sound
+; tables sit under the NMI vectors ($FFFA).
+
+LINE_TAB	= $FF40
+
 LINE_TAB_END	= LINE_TAB + 72
 SOUND_TABLE	= LINE_TAB_END		; sound_table: SOUND_COUNT words (playsound.asm)
-SOUND_TABLE_MAX	= $0400 - SOUND_TABLE	; 132 B = 66 sounds
 
-; F5/F7. IRQ ORs the latch, poll_quick_keys clears it. Not KERNAL ZP $90–$bf.
+SOUND_TABLE_MAX	= 128
+
+
+; Shift-S / Shift-L. a8_keys sets the latch once per press (qk_held stays 1
+; until all keys are up), poll_quick_keys clears it. in_qload must follow
+; in_qsave (a8_keys indexes them). qk_held is not cleared by init_irq: a
+; key still down after a quickload must not fire again.
 in_qsave	= SKEL_BSS_END
 in_qload	= in_qsave + 1
-qs_cmd		= in_qload + 1		; 0 = save, 1 = load (overlay reads this)
-save_end	= qs_cmd + 1		; word: exclusive KERNAL SAVE end
-ls_first	= save_end + 2		; 1 = line_solids_* stops at the first hit
+qk_held		= in_qload + 1
+ls_first	= qk_held + 1		; 1 = line_solids_* stops at the first hit
 sl_end		= ls_first + 1		; room-slice loop bound (leaf loops only, never nested)
 ut_end		= sl_end + 1		; update_triggers slice bound (trig_enter may reach sl_end users)
 QS_LATCH_END	= ut_end + 1
-QS_FAIL_SALVAGE	= 1			; overlay A on C=1: state already overwritten
-!if QS_LATCH_END > RB_CELL {
+; Quicksave slot: the last QSAVE_N sectors of the ATR (tools/mkatr.py checks
+; both numbers). The QSAVE overlay (a8qsave.asm) is loaded over bitmap A at
+; QS_OVL, above the three context pages a8_ctx_save parks at the top of the
+; draw bitmap, run with the screen blanked (den_arm = 1), and wiped after.
+QSAVE_N		= 5
+QSAVE_SEC	= 1036
+QS_OVL		= $C300
+!if  QS_LATCH_END > RB_CELL {
 	!error "quicksave latches overlap rb_n"
 }
 ; Cheat FSM + god_mode. Outside the quicksave image ($CB70–$D000) and not
@@ -342,18 +295,18 @@ cheat_a		= cheat_dig_prev + 1
 cheat_b		= cheat_a + 1
 cheat_c		= cheat_b + 1
 cheat_req	= cheat_c + 1		; 0 / CHEAT_REQ_*
-CHEAT_BSS_END	= cheat_req + 1
-; 1351 POTX. Play only (boot is finished). mouse_en itself is ZP $cd.
-mouse_x		= CHEAT_BSS_END		; last SID POTX >> 2 (6-bit)
-mouse_turn	= mouse_x + 1		; 16-bit signed sum of 5-bit pot deltas (4 = 1 yaw tick)
+cheat_kdown	= cheat_req + 1		; 0 = saw key up, else KBCODE+1. Not in cheat_was
+CHEAT_BSS_END	= cheat_kdown + 1
+; ST mouse port 2, X quadrature. Play only. mouse_en itself is ZP $cd.
+mouse_x		= CHEAT_BSS_END		; previous raw 2-bit X state (pins 1–2, active low)
+mouse_turn	= mouse_x + 1		; 16-bit signed sum of steps (2 = 1 yaw tick)
 mouse_turn_h	= mouse_turn + 1
-mouse_pb0	= mouse_turn_h + 1	; accum_keys PB0 bits (RMB vs 1/3/5)
-mouse_ok	= mouse_pb0 + 1		; 0 = next POTX is a baseline, not a delta
-mouse_rem	= mouse_ok + 1		; sub-tick remainder (0..3) carried between frames
-mouse_lim	= mouse_rem + 1		; read_input: max |ticks| this frame (2x keyboard rate)
-mouse_v		= mouse_lim + 1		; last unwrapped delta, clamped ±47 (alias picker)
+mouse_f		= mouse_turn_h + 1		; fast-mode timer: samples left (0 = slow decode)
+mouse_rem	= mouse_f + 1		; sub-tick remainder (0..1) carried between frames
+mouse_lim	= mouse_rem + 1		; read_input: max |ticks| this frame (2x stick rate)
+mouse_v		= mouse_lim + 1		; last step direction (+1 / $ff), sign for a 2-step sample
 MOUSE_BSS_END	= mouse_v + 1
-!if MOUSE_BSS_END > RB_CELL {
+!if  MOUSE_BSS_END > RB_CELL {
 	!error "mouse BSS overlaps rb_n"
 }
 
@@ -374,6 +327,9 @@ AIH_POSE_OFF	= 12
 AIH_FLAGS	= 14
 AIH_SIZE	= 15
 AI_LINK_BASE	= $A000
+; Boot parks tab.prg here and a8_bind_tabs copies it before LoadLevel.
+; Resident game must end below this. a8boot.asm job dest is the same address.
+TAB_STAGE	= $B000
 AI_CMD_ATTACK_TICK	= 0
 AI_CMD_FIRE		= 1
 AI_CMD_ATTACK_END	= 2
@@ -390,6 +346,8 @@ AI_CMD_PAIN_TICK	= 12
 AI_CMD_PAIN_ASK		= 13
 AI_CMD_DEATH		= 14		; corpse finished: grunt/ogre drop
 AI_CMD_SCRAG_DODGE	= 15		; scrag bank: hold-bubble sidestep, C=1 if set
+AI_CMD_RED_ON		= 16		; chthon bank: line bodies ora->eor (pixel %10 red on paper)
+AI_CMD_RED_OFF		= 17		; chthon bank: restore ora
 CRUSH_CMD_TICK		= 0
 CRUSH_CMD_SOLID		= 1
 CRUSH_CMD_DRAW		= 2
@@ -399,13 +357,18 @@ AI_AP_NEXT		= 2
 
 ; Unique charset-tail LUTs. Char 192 ($x600) is $FF×8 in all four halves.
 ; ALOG is two pages (ALOGHI replaces ALOGTAB+$100). COSTAB = SINTAB+64.
-SINTAB		= $D608			; 320 bytes (extra quadrant for COS)
-COSTAB		= SINTAB + 64		; $D648
-invzl		= $DE08			; 128
-ALOGTAB		= $DF00			; 256
-invzh		= $E608			; 128
-ALOGHI		= $E700			; 256
-LOGTAB		= $EF00			; 256
+; Atari: $D000-$D7FF is I/O. Bitmap B is the $E000 4K (ANTIC does not
+; carry a screen pointer across a 4K boundary). Play state + alog/log
+; sit in the RAM at $D800-$DFFF, under that bitmap.
+
+SINTAB		= $FC00			; 320 bytes
+COSTAB		= SINTAB + 64
+invzl		= $FD40			; 128
+invzh		= $FDC0			; 128
+ALOGTAB		= $FE40			; 256
+ALOGHI		= $DE00			; 256, after the $D800 play block
+LOGTAB		= $DF00			; 256
+
 
 SCR_A		= $C000
 SCR_B		= $C400
@@ -415,26 +378,29 @@ CH_B_TOP	= $E000
 CH_B_BOT	= $E800
 MARGIN_GLYPH	= CH_A_TOP + 24 * 64	; $D600 — char 192, A top
 
-PROJ_X		= $CA00			; 16 view/proj slots (NVERTS=13 used)
-PROJ_Y		= $CA10
-PROJ_Z		= $CA20
-CAM_X		= $CA30
-CAM_Y		= $CA40
-CAM_Z		= $CA50
-PROJ_XH		= $CA60
-PROJ_YH		= $CA70
-CAM_XH		= $CA80
-CAM_YH		= $CA90
-CAM_ZH		= $CAA0
-PROJ_ZH		= $CAB0
-EDGE_VIS	= $CAC0			; 32 edge flags (tetromino rooms ≤28)
-CLIP_X0		= $CAE0
-CLIP_Y0		= $CB00
-CLIP_X1		= $CB20
-CLIP_Y1		= $CB40
-frame_t0	= $CB60			; 4-byte CIA2 cascade snapshot
-frame_cy	= $CB64
-casc_now	= $CB68
+
+A8_OFF		= $0E00			; $CA00-$CFFF -> $D800-$DDFF (under bitmap B)
+
+PROJ_X		= $CA00 + A8_OFF			; 16 view/proj slots (NVERTS=13 used)
+PROJ_Y		= $CA10 + A8_OFF
+PROJ_Z		= $CA20 + A8_OFF
+CAM_X		= $CA30 + A8_OFF
+CAM_Y		= $CA40 + A8_OFF
+CAM_Z		= $CA50 + A8_OFF
+PROJ_XH		= $CA60 + A8_OFF
+PROJ_YH		= $CA70 + A8_OFF
+CAM_XH		= $CA80 + A8_OFF
+CAM_YH		= $CA90 + A8_OFF
+CAM_ZH		= $CAA0 + A8_OFF
+PROJ_ZH		= $CAB0 + A8_OFF
+EDGE_VIS	= $CAC0 + A8_OFF			; 32 edge flags (tetromino rooms ≤28)
+CLIP_X0		= $CAE0 + A8_OFF
+CLIP_Y0		= $CB00 + A8_OFF
+CLIP_X1		= $CB20 + A8_OFF
+CLIP_Y1		= $CB40 + A8_OFF
+frame_t0	= $CB60 + A8_OFF			; 4-byte CIA2 cascade snapshot
+frame_cy	= $CB64 + A8_OFF
+casc_now	= $CB68 + A8_OFF
 
 FOCAL		= 100
 LOG_FOCAL	= 213			; round(32*log2(100))
@@ -454,7 +420,6 @@ KEY_S		= 4
 KEY_D		= 8
 KEY_I		= 16
 KEY_J		= 32
-KEY_K		= 64
 KEY_L		= 128
 PERSP_MAX	= 127
 CLIP_XMIN	= -96			; signed offset: x 0..191
@@ -570,36 +535,36 @@ PROC_LOWER_DOOR	= 3
 PROC_LOWER_ELEV	= 4
 PROC_RAISE_ELEV	= 5
 
-PROC_KIND	= $CB70
-PROC_A		= $CB78			; world object id (door_id / elev_id)
-PROC_B		= $CB80			; dest / next kind
-PROC_C		= $CB88			; timer/accum lo
-PROC_D		= $CB90			; timer/accum hi
-PROC_E		= $CB98			; elev home return Y
-PROC_L		= $CBA0			; local door/elev SoA index
-floor_slope	= $CBA8			; 1 if this frame's floor is a ramp
-trig_inside	= $CBA9			; occupancy bits, Nth same-room trigger
-hurt_ms_l	= $CBAA			; hurt-trigger cooldown remaining
-hurt_ms_h	= $CBAB
-vic_border	= $CBAC			; staged $d020 (IRQ)
-palette_dirty	= $CBAD			; 1 = IRQ refill viewport colour RAM
-flash4_col	= $CBAE			; staged sprite 4 colour
-flash5_col	= $CBAF			; staged sprite 5 colour
+PROC_KIND	= $CB70 + A8_OFF
+PROC_A		= $CB78 + A8_OFF			; world object id (door_id / elev_id)
+PROC_B		= $CB80 + A8_OFF			; dest / next kind
+PROC_C		= $CB88 + A8_OFF			; timer/accum lo
+PROC_D		= $CB90 + A8_OFF			; timer/accum hi
+PROC_E		= $CB98 + A8_OFF			; elev home return Y
+PROC_L		= $CBA0 + A8_OFF			; local door/elev SoA index
+floor_slope	= $CBA8 + A8_OFF			; 1 if this frame's floor is a ramp
+trig_inside	= $CBA9 + A8_OFF			; occupancy bits, Nth same-room trigger
+hurt_ms_l	= $CBAA + A8_OFF			; hurt-trigger cooldown remaining
+hurt_ms_h	= $CBAB + A8_OFF
+vic_border	= $CBAC + A8_OFF			; staged $d020 (IRQ)
+palette_dirty	= $CBAD + A8_OFF			; 1 = IRQ refill viewport colour RAM
+flash4_col	= $CBAE + A8_OFF			; staged sprite 4 colour
+flash5_col	= $CBAF + A8_OFF			; staged sprite 5 colour
 HURT_MS		= 1000			; hurt trigger period (both sizes)
 HURT_SM_HP	= 2			; small hurt, once per second
 HURT_LG_HP	= 10			; large hurt, once per second
 
-elev_y		= $CBB0			; MAP_NELEVS (≤4)
-elev_noise_n	= $CBB4			; refcount: SID V3 rumble while elevs move
-den_arm		= $CBB5			; 1 = DEN held off, 2 = view IRQ may set DEN
-pub_ff		= $CBB6			; frame_flag when the draw buffer was published
-pub_ph		= $CBB7			; irq_phase then (0 = before this frame's view IRQ)
-proc_tmp0	= $CBB8
-proc_tmp1	= $CBB9
-proc_tmp2	= $CBBA
-proc_tmp3	= $CBBB
-proc_tmp4	= $CBBC
-proc_tmp5	= $CBBD
+elev_y		= $CBB0 + A8_OFF			; MAP_NELEVS (≤4)
+elev_noise_n	= $CBB4 + A8_OFF			; refcount: SID V3 rumble while elevs move
+den_arm		= $CBB5 + A8_OFF			; 1 = DEN held off, 2 = view IRQ may set DEN
+pub_ff		= $CBB6 + A8_OFF			; frame_flag when the draw buffer was published
+pub_ph		= $CBB7 + A8_OFF			; irq_phase then (0 = before this frame's view IRQ)
+proc_tmp0	= $CBB8 + A8_OFF
+proc_tmp1	= $CBB9 + A8_OFF
+proc_tmp2	= $CBBA + A8_OFF
+proc_tmp3	= $CBBB + A8_OFF
+proc_tmp4	= $CBBC + A8_OFF
+proc_tmp5	= $CBBD + A8_OFF
 MOTION_STEP_MS	= 64
 ELEV_STEP_MS	= 128			; half elevator travel speed vs doors
 CRUSH_STEP_MS	= 512			; 1/4 elevator travel (4× ELEV_STEP_MS)
@@ -614,57 +579,67 @@ HUD_MSG_COL	= 0
 HUD_MSG_W	= 40
 SAMPLE_MS_PAL	= 20			; ms per mid-split tick (50 Hz)
 SAMPLE_MS_NTSC	= 17			; ≈1000/60
-in_fwd		= $CBBE			; 16-bit hold ms (IRQ accum)
-in_back		= $CBC0
-in_strafel	= $CBC2
-in_strafer	= $CBC4
-in_turn_l	= $CBC6
-in_turn_r	= $CBC8
-hold_fwd	= $CBCA			; 16-bit snapshots (read_input)
-hold_back	= $CBCC
-hold_strafel	= $CBCE
-hold_strafer	= $CBD0
-hold_turn_l	= $CBD2
-hold_turn_r	= $CBD4
-in_use		= $CBD6			; IRQ latch: K pressed
-key_use		= $CBD7			; frame snapshot
-key_use_was	= $CBD8			; rising-edge debounce
-pl_falling	= $CBD9			; 0 grounded, 1 airborne
-fall_vl		= $CBDA			; 8.8 downward vel lo
-fall_vh		= $CBDB
-fall_y0		= $CBDC			; cam_yh when fall started
-fall_acc	= $CBDD			; leftover ms toward FALL_TICK_MS
+in_fwd		= $CBBE + A8_OFF			; 16-bit hold ms (IRQ accum)
+in_back		= $CBC0 + A8_OFF
+in_strafel	= $CBC2 + A8_OFF
+in_strafer	= $CBC4 + A8_OFF
+in_turn_l	= $CBC6 + A8_OFF
+in_turn_r	= $CBC8 + A8_OFF
+hold_fwd	= $CBCA + A8_OFF			; 16-bit snapshots (read_input)
+hold_back	= $CBCC + A8_OFF
+hold_strafel	= $CBCE + A8_OFF
+hold_strafer	= $CBD0 + A8_OFF
+hold_turn_l	= $CBD2 + A8_OFF
+hold_turn_r	= $CBD4 + A8_OFF
+in_use		= $CBD6 + A8_OFF			; unused; quicksave span
+key_use		= $CBD7 + A8_OFF			; unused; quicksave span
+key_use_was	= $CBD8 + A8_OFF			; door_blk rising edge
+pl_falling	= $CBD9 + A8_OFF			; 0 grounded, 1 airborne
+fall_vl		= $CBDA + A8_OFF			; 8.8 downward vel lo
+fall_vh		= $CBDB + A8_OFF
+fall_y0		= $CBDC + A8_OFF			; cam_yh when fall started
+fall_acc	= $CBDD + A8_OFF			; leftover ms toward FALL_TICK_MS
 
 ; Unique world X/Z + 8.8 sin/cos products for xform_mesh_xz (6+6 unique, 16 verts)
-UX		= $CBDE			; 6 bytes
-UZ		= $CBE4
-VY		= $CBEA			; 16 bytes (vert Y)
-XC_L		= $CBFA			; 6
-XC_H		= $CC00
-XS_L		= $CC06
-XS_H		= $CC0C
-ZC_L		= $CC12
-ZC_H		= $CC18
-ZS_L		= $CC1E
-ZS_H		= $CC24			; last byte $CC29
+UX		= $CBDE + A8_OFF			; 6 bytes
+UZ		= $CBE4 + A8_OFF
+VY		= $CBEA + A8_OFF			; 16 bytes (vert Y)
+XC_L		= $CBFA + A8_OFF			; 6
+XC_H		= $CC00 + A8_OFF
+XS_L		= $CC06 + A8_OFF
+XS_H		= $CC0C + A8_OFF
+ZC_L		= $CC12 + A8_OFF
+ZC_H		= $CC18 + A8_OFF
+ZS_L		= $CC1E + A8_OFF
+ZS_H		= $CC24 + A8_OFF			; last byte $CC29
 
-; Hardware sprite view-model (VIC bank 3)
-WPN_RAM		= $C800			; 4 body sprites (256 bytes)
-WPN_FLASH	= $C900			; sprite 4 generic / spark / nail L
-WPN_FLASH2	= $C940			; sprite 5 nail R
-WPN_EMUZ	= $C980			; sprite 6 enemy muzzle (one at a time)
-WPN_SPLAT	= $C9C0			; sprite 7 impact splat (hit/miss)
-WPN_PTR0	= (WPN_RAM - SCR_A) / 64	; $20
-WPN_PTR_FLASH	= (WPN_FLASH - SCR_A) / 64	; $24
-WPN_PTR_FLASH2	= (WPN_FLASH2 - SCR_A) / 64	; $25
-WPN_PTR_EMUZ	= (WPN_EMUZ - SCR_A) / 64	; $26
-WPN_PTR_SPLAT	= (WPN_SPLAT - SCR_A) / 64	; $27
+; Hardware sprite view-model (VIC bank 3). Atari body/flash cells are baked.
+; Muzzle and splat are mode-E pointers (emuz_src, splat_src). Buffers sit
+; under the heap ceiling so they miss bitmap A.
+
+WPN_RAM		= $BE00
+WPN_FLASH	= $BF00
+WPN_FLASH2	= $BF40
+WPN_EMUZ	= $BF80
+WPN_SPLAT	= $BFC0
+HEAP_LIM	= $BC00
+HUD_SCR		= $0200
+BMP_A		= $C000			; 4K, does not cross a 4K boundary
+BMP_B		= $E000
+WPN_PTR0	= 0
+WPN_PTR_FLASH	= 0
+WPN_PTR_FLASH2	= 0
+WPN_PTR_EMUZ	= 0
+WPN_PTR_SPLAT	= 0
+
 FLASH_EN_L	= $10			; $d015 sprite 4
 FLASH_EN_R	= $20			; $d015 sprite 5
-COL_WPN		= 0 			; default weapon colour (room_wpn / col_wpn)
+COL_WPN		= 0 			; weapon sprite colour (C64 only)
+COL_FX		= 1 			; enemy muzzle sprite colour (C64 only)
 COL_FLASH_Y	= 1			    ; yellow
 COL_FLASH_R	= 2			    ; red
 COL_SPLAT_HIT	= 2			; red (blood) (DO NOT CHANGE BACK TO PINK!)
+COL_SPLAT_MISS	= 0			; wall hit / spark; must differ from COL_SPLAT_HIT
 SPLAT_MSB	= $80			; $d010 / $d015 bit for sprite 7
 WPN_X0		= 160			; 2×2 top-left, visual centre 184
 WPN_Y_FLUSH	= 208			; 42px tall, viewport bottom ~250
@@ -726,76 +701,77 @@ EMUZ_Z0		= 8			; tip CAM_ZH LOD bands → spr 0..2
 EMUZ_Z1		= 16
 
 ; Weapon BSS (after unique-XZ products)
-in_fire		= $CC2A
-in_wpn_axe	= $CC2B			; 4 bytes: axe shot nail gren
-in_wpn_shot	= $CC2C
-in_wpn_nail	= $CC2D
-in_wpn_gren	= $CC2E
-key_fire	= $CC2F
-key_wpn_axe	= $CC30			; 4 bytes
-key_wpn_shot	= $CC31
-key_wpn_nail	= $CC32
-key_wpn_gren	= $CC33
-cur_weapon	= $CC34
-wpn_pose	= $CC35			; POSE_*
-fire_rpt_l	= $CC36
-fire_rpt_h	= $CC37
+in_fire		= $CC2A + A8_OFF
+in_wpn_axe	= $CC2B + A8_OFF			; 4 bytes: axe shot nail gren
+in_wpn_shot	= $CC2C + A8_OFF
+in_wpn_nail	= $CC2D + A8_OFF
+in_wpn_gren	= $CC2E + A8_OFF
+key_fire	= $CC2F + A8_OFF
+key_wpn_axe	= $CC30 + A8_OFF			; 4 bytes
+key_wpn_shot	= $CC31 + A8_OFF
+key_wpn_nail	= $CC32 + A8_OFF
+key_wpn_gren	= $CC33 + A8_OFF
+cur_weapon	= $CC34 + A8_OFF
+wpn_pose	= $CC35 + A8_OFF			; POSE_*
+fire_rpt_l	= $CC36 + A8_OFF
+fire_rpt_h	= $CC37 + A8_OFF
 ; Line-vs-AABB temps (util.asm). Not rot0–rot2.
-ln_r0		= $CC38
-ln_r1		= $CC39
-ln_r2		= $CC3A
-mg_frame	= $CC3B
-wpn_x		= $CC3C
-wpn_y		= $CC3D
-spr_en		= $CC3E
-anim_step	= $CC3F
-anim_ms_l	= $CC40
-anim_ms_h	= $CC41
-wpn_flash_en	= $CC42
-wpn_flash_dy	= $CC43
-wpn_tmp0	= $CC44
-ws_slot		= $CC45			; WS_EMUZ / WS_SPLAT during start_world_spr
+ln_r0		= $CC38 + A8_OFF
+ln_r1		= $CC39 + A8_OFF
+ln_r2		= $CC3A + A8_OFF
+mg_frame	= $CC3B + A8_OFF
+wpn_x		= $CC3C + A8_OFF
+wpn_y		= $CC3D + A8_OFF
+spr_en		= $CC3E + A8_OFF
+anim_step	= $CC3F + A8_OFF
+anim_ms_l	= $CC40 + A8_OFF
+anim_ms_h	= $CC41 + A8_OFF
+wpn_flash_en	= $CC42 + A8_OFF
+wpn_flash_dy	= $CC43 + A8_OFF
+wpn_tmp0	= $CC44 + A8_OFF
+ws_slot		= $CC45 + A8_OFF			; WS_EMUZ / WS_SPLAT during start_world_spr
 ; Pose stream scratch (was flash5 timer + emuz on/ms)
-need0		= $CC46			; type id or $FF
-need1		= $CC47			; type id or $FF
-pose_dump	= $CC48			; type being dumped
-pose_keep	= $CC49			; surviving type while dumping ($FF = none)
-load_device	= $CC4A			; IEC device (KERNAL $ba is not ours during play)
-emuz_xmsb	= $CC4B			; $d010 bit6 when X>=256
-item_spin	= $CC4C			; world pickup yaw (0..255)
-item_spin_l	= $CC4D			; 8.8 fraction
-map_sv_a	= $CC4E			; heap_alloc size hi scratch
-map_sv_y	= $CC4F			; enemy slot / keep type scratch
-bind_cur	= $CC50			; word: bind_map cursor
-heap_top	= $CC52			; word: next LOAD dest (grows down from SCR_A)
-map_base	= $CC54			; word: packed map payload
-load_dest	= $CC56			; word: current LOAD dest
-load_in_play	= $CC58
-load_namelen	= $CC59
-load_name_l	= $CC5A
-load_name_h	= $CC5B
-load_type	= $CC5C
-bind_n		= $CC5D
-reloc_base	= $CC5E			; word: reloc dest words in the map prefix
+need0		= $CC46 + A8_OFF			; type id or $FF
+need1		= $CC47 + A8_OFF			; type id or $FF
+pose_dump	= $CC48 + A8_OFF			; type being dumped
+pose_keep	= $CC49 + A8_OFF			; surviving type while dumping ($FF = none)
+load_device	= $CC4A + A8_OFF			; IEC device (KERNAL $ba is not ours during play)
+emuz_xmsb	= $CC4B + A8_OFF			; $d010 bit6 when X>=256
+item_spin	= $CC4C + A8_OFF			; world pickup yaw (0..255)
+item_spin_l	= $CC4D + A8_OFF			; 8.8 fraction
+map_sv_a	= $CC4E + A8_OFF			; heap_alloc size hi scratch
+map_sv_y	= $CC4F + A8_OFF			; enemy slot / keep type scratch
+bind_cur	= $CC50 + A8_OFF			; word: bind_map cursor
+heap_top	= $CC52 + A8_OFF			; word: next LOAD dest (grows down from SCR_A)
+map_base	= $CC54 + A8_OFF			; word: packed map payload
+load_dest	= $CC56 + A8_OFF			; word: current LOAD dest
+load_in_play	= $CC58 + A8_OFF
+load_namelen	= $CC59 + A8_OFF
+load_name_l	= $CC5A + A8_OFF
+load_name_h	= $CC5B + A8_OFF
+load_type	= $CC5C + A8_OFF
+bind_n		= $CC5D + A8_OFF
+reloc_base	= $CC5E + A8_OFF			; word: reloc dest words in the map prefix
 
 ; Per-vertex clip data hoisted out of mesh_clip (16 slots each)
-VOC		= $CC60			; Cohen–Sutherland outcode, or OC_NEAR
-clip_n		= $CC70			; mesh_clip edges left
-nc_n		= $CC71			; near clip: scaled (ZCLIP - zB) / (zF - zB)
-nc_d		= $CC72
-nc_v		= $CC73			; near clip: CAM index across lerp16
-nc_s		= $CC74			; near clip: behind endpoint's ox/oy slot (0/4)
-; $CC75–$CC7F free
-VSX		= $CC80			; screen X/Y (front verts with outcode 0)
-VSY		= $CC90
+VOC		= $CC60 + A8_OFF			; Cohen–Sutherland outcode, or OC_NEAR
+clip_n		= $CC70 + A8_OFF			; mesh_clip edges left
+nc_n		= $CC71 + A8_OFF			; near clip: scaled (ZCLIP - zB) / (zF - zB)
+nc_d		= $CC72 + A8_OFF
+nc_v		= $CC73 + A8_OFF			; near clip: CAM index across lerp16
+nc_s		= $CC74 + A8_OFF			; near clip: behind endpoint's ox/oy slot (0/4)
+emuz_src	= $CC75 + A8_OFF			; mode-E muzzle rows (21×3)
+; $CC77–$CC7F free
+VSX		= $CC80 + A8_OFF			; screen X/Y (front verts with outcode 0)
+VSY		= $CC90 + A8_OFF
 
 ; Per-XZ-column project cache (verts sharing x,z share z_eye/inv/PROJ_X)
-COL_DONE	= $CCA0			; 0 = new, 1 = front cached, 2 = behind
-COL_INVL	= $CCB0
-COL_INVH	= $CCC0
-COL_INVK	= $CCD0
-COL_PXL		= $CCE0
-COL_PXH		= $CCF0
+COL_DONE	= $CCA0 + A8_OFF			; 0 = new, 1 = front cached, 2 = behind
+COL_INVL	= $CCB0 + A8_OFF
+COL_INVH	= $CCC0 + A8_OFF
+COL_INVK	= $CCD0 + A8_OFF
+COL_PXL		= $CCE0 + A8_OFF
+COL_PXH		= $CCF0 + A8_OFF
 
 ; Player inventory + backpack taken flags (after project cache)
 AMMO_SHELLS_MAX		= 100
@@ -831,147 +807,147 @@ WPN_SHOT	= 1
 WPN_NAIL	= 2
 WPN_GREN	= 3
 
-ammo_shells	= $CD00
-ammo_nails	= $CD01
-ammo_grenades	= $CD02
-have_wpn	= $CD03			; bitfield HAVE_*
-bp_taken	= $CD04			; MAP_NBACKPACKS (≤ BP_MAX)
-player_hp	= $CD24			; 0..PLAYER_HP_MAX
-player_armour	= $CD25			; 0..PLAYER_ARMOUR_MAX
-en_state	= $CD26			; ENEMY_MAX: EN_*
-en_frame	= $CD3E			; ENEMY_MAX: local frame in current clip
-drop_taken	= $CD56			; ENEMY_MAX: 1=inactive/taken, 0=active
-drop_x		= $CD6E
-drop_y		= $CD86
-drop_z		= $CD9E
-drop_room	= $CDB6
-drop_type	= $CDCE			; BP_* when active
-en_hp		= $CDE6			; ENEMY_MAX
-en_timer	= $CDFE			; ENEMY_MAX: attack pause / dog idle / death hold ms lo
-en_timer_h	= $CE16			; ENEMY_MAX: attack pause / dog idle / death hold ms hi
-en_step		= $CE2E			; ENEMY_MAX: walk acc lo
-en_step_h	= $CE46			; ENEMY_MAX: walk acc hi
-en_dir		= $CE5E			; ENEMY_MAX: 0..7 dodge facing
-gunshot_wake	= $CE76			; 1 = gun fired this frame (room wake)
-ai_dirtry	= $CE77			; 5 bytes dodge dir candidates
-ai_turn		= $CE7C			; turnaround dir or $ff
-ai_probe	= $CE7D			; dir under test (probe must not clobber)
-emuz_vx		= $CE7E			; VIC X lo staged (IRQ apply_en)
-emuz_vy		= $CE7F			; VIC Y staged
-emuz_col		= $CE80			; sprite colour staged from col_fx
-emuz_pending	= $CE81			; enemy idx waiting to muzzle, $ff = none
-fb_probe_y	= $CE82			; floor_below: inclusive max walkable Y
-death_wait_l	= $CE83			; death hold ms acc
-death_wait_h	= $CE84
-col_room	= $CE85			; collision room for inset/floor/solid
-splat_xmsb	= $CE86			; $d010 bit7 when X>=256
-splat_vx		= $CE87
-splat_vy		= $CE88
-splat_col	= $CE89			; COL_SPLAT_HIT or col_line (miss)
-trig_seen	= $CE8A			; update_triggers: b0=hurt ticked, b1=msg overlap
-shot_hit_i	= $CE8B			; closest hitscan enemy, $ff = miss
-shot_hit_z	= $CE8C			; CAM_ZH of that hit
-hurt_flash_l	= $CE8D			; remaining red-border ms
-hurt_flash_h	= $CE8E
-bite_splat_i	= $CE8F			; dog idx pending blood splat, $ff = none
-status_ms_l	= $CE90			; status HUD remaining ms
-status_ms_h	= $CE91
-door_i0		= $CE92			; room door slice start
-door_i1		= $CE93			; exclusive end
-sw_match	= $CE94			; cooked door/enable-tag id while unlocking/arming
-en_pat_n	= $CE95			; ENEMY_MAX: patrol cells left, or dog repath frames
-en_pain_i	= $CEAD			; ENEMY_MAX: pain/death/attack variant index
-have_keys	= $CEC5			; HAVE_SILVER / HAVE_GOLD / HAVE_EARTH
-pu_kind		= $CEC6			; 0 or BP_QUAD / BP_PENT / BP_RING
-pu_ms_l		= $CEC7
-pu_ms_h		= $CEC8
-fx_oxl		= $CEC9			; world origin 8.8 (same as grenade)
-fx_oyl		= $CECA
-fx_ozl		= $CECB
-fx_ox		= $CECC
-fx_oy		= $CECD
-fx_oz		= $CECE
-sample_ms_chk	= $CECF			; shadow of sample_ms (init_irq); tripwire restore
-spd_trip	= $CED0			; sample_ms corruption count (IRQ .top)
+ammo_shells	= $CD00 + A8_OFF
+ammo_nails	= $CD01 + A8_OFF
+ammo_grenades	= $CD02 + A8_OFF
+have_wpn	= $CD03 + A8_OFF			; bitfield HAVE_*
+bp_taken	= $CD04 + A8_OFF			; MAP_NBACKPACKS (≤ BP_MAX)
+player_hp	= $CD24 + A8_OFF			; 0..PLAYER_HP_MAX
+player_armour	= $CD25 + A8_OFF			; 0..PLAYER_ARMOUR_MAX
+en_state	= $CD26 + A8_OFF			; ENEMY_MAX: EN_*
+en_frame	= $CD3E + A8_OFF			; ENEMY_MAX: local frame in current clip
+drop_taken	= $CD56 + A8_OFF			; ENEMY_MAX: 1=inactive/taken, 0=active
+drop_x		= $CD6E + A8_OFF
+drop_y		= $CD86 + A8_OFF
+drop_z		= $CD9E + A8_OFF
+drop_room	= $CDB6 + A8_OFF
+drop_type	= $CDCE + A8_OFF			; BP_* when active
+en_hp		= $CDE6 + A8_OFF			; ENEMY_MAX
+en_timer	= $CDFE + A8_OFF			; ENEMY_MAX: attack pause / dog idle / death hold ms lo
+en_timer_h	= $CE16 + A8_OFF			; ENEMY_MAX: attack pause / dog idle / death hold ms hi
+en_step		= $CE2E + A8_OFF			; ENEMY_MAX: walk acc lo
+en_step_h	= $CE46 + A8_OFF			; ENEMY_MAX: walk acc hi
+en_dir		= $CE5E + A8_OFF			; ENEMY_MAX: 0..7 dodge facing
+gunshot_wake	= $CE76 + A8_OFF			; 1 = gun fired this frame (room wake)
+ai_dirtry	= $CE77 + A8_OFF			; 5 bytes dodge dir candidates
+ai_turn		= $CE7C + A8_OFF			; turnaround dir or $ff
+ai_probe	= $CE7D + A8_OFF			; dir under test (probe must not clobber)
+emuz_vx		= $CE7E + A8_OFF			; VIC X lo staged (IRQ apply_en)
+emuz_vy		= $CE7F + A8_OFF			; VIC Y staged
+emuz_col		= $CE80 + A8_OFF			; sprite colour staged (C64 only)
+emuz_pending	= $CE81 + A8_OFF			; enemy idx waiting to muzzle, $ff = none
+fb_probe_y	= $CE82 + A8_OFF			; floor_below: inclusive max walkable Y
+death_wait_l	= $CE83 + A8_OFF			; death hold ms acc
+death_wait_h	= $CE84 + A8_OFF
+col_room	= $CE85 + A8_OFF			; collision room for inset/floor/solid
+splat_xmsb	= $CE86 + A8_OFF			; $d010 bit7 when X>=256
+splat_vx		= $CE87 + A8_OFF
+splat_vy		= $CE88 + A8_OFF
+splat_col	= $CE89 + A8_OFF			; COL_SPLAT_HIT or COL_SPLAT_MISS
+trig_seen	= $CE8A + A8_OFF			; update_triggers: b0=hurt ticked, b1=msg overlap
+shot_hit_i	= $CE8B + A8_OFF			; closest hitscan enemy, $ff = miss
+shot_hit_z	= $CE8C + A8_OFF			; CAM_ZH of that hit
+hurt_flash_l	= $CE8D + A8_OFF			; remaining red-border ms
+hurt_flash_h	= $CE8E + A8_OFF
+bite_splat_i	= $CE8F + A8_OFF			; dog idx pending blood splat, $ff = none
+status_ms_l	= $CE90 + A8_OFF			; status HUD remaining ms
+status_ms_h	= $CE91 + A8_OFF
+door_i0		= $CE92 + A8_OFF			; room door slice start
+door_i1		= $CE93 + A8_OFF			; exclusive end
+sw_match	= $CE94 + A8_OFF			; cooked door/enable-tag id while unlocking/arming
+en_pat_n	= $CE95 + A8_OFF			; ENEMY_MAX: patrol cells left, or dog repath frames
+en_pain_i	= $CEAD + A8_OFF			; ENEMY_MAX: pain/death/attack variant index
+have_keys	= $CEC5 + A8_OFF			; HAVE_SILVER / HAVE_GOLD / HAVE_EARTH
+pu_kind		= $CEC6 + A8_OFF			; 0 or BP_QUAD / BP_PENT / BP_RING
+pu_ms_l		= $CEC7 + A8_OFF
+pu_ms_h		= $CEC8 + A8_OFF
+fx_oxl		= $CEC9 + A8_OFF			; world origin 8.8 (same as grenade)
+fx_oyl		= $CECA + A8_OFF
+fx_ozl		= $CECB + A8_OFF
+fx_ox		= $CECC + A8_OFF
+fx_oy		= $CECD + A8_OFF
+fx_oz		= $CECE + A8_OFF
+sample_ms_chk	= $CECF + A8_OFF			; shadow of sample_ms (init_irq); tripwire restore
+spd_trip	= $CED0 + A8_OFF			; sample_ms corruption count (IRQ .top)
 ; Grenade SoA — 4 slots × 20 bytes, $CED1–$CF20
-gr_on		= $CED1
-gr_owner	= $CED5
-gr_flags	= $CED9
-gr_acc		= $CEDD
-gr_xl		= $CEE1
-gr_xh		= $CEE5
-gr_yl		= $CEE9
-gr_yh		= $CEED
-gr_zl		= $CEF1
-gr_zh		= $CEF5
-gr_vxl		= $CEF9
-gr_vxh		= $CEFD
-gr_vyl		= $CF01
-gr_vyh		= $CF05
-gr_vzl		= $CF09
-gr_vzh		= $CF0D
-gr_fuse_l	= $CF11
-gr_fuse_h	= $CF15
-gr_life_l	= $CF19
-gr_life_h	= $CF1D
-sham_alert_ph	= $CF21			; flips each anim tick; 1 = hold Shambler alert or magic frame
-hit_dmg		= $CF22			; applied damage for the current damage_enemy call
-dodge_dx	= $CF23			; select_dodge_dir: signed dx toward player
-dodge_dz	= $CF24			; signed dz toward player
-dodge_i		= $CF25			; 0..4 probe index, live across enemy_probe_dir
+gr_on		= $CED1 + A8_OFF
+gr_owner	= $CED5 + A8_OFF
+gr_flags	= $CED9 + A8_OFF
+gr_acc		= $CEDD + A8_OFF
+gr_xl		= $CEE1 + A8_OFF
+gr_xh		= $CEE5 + A8_OFF
+gr_yl		= $CEE9 + A8_OFF
+gr_yh		= $CEED + A8_OFF
+gr_zl		= $CEF1 + A8_OFF
+gr_zh		= $CEF5 + A8_OFF
+gr_vxl		= $CEF9 + A8_OFF
+gr_vxh		= $CEFD + A8_OFF
+gr_vyl		= $CF01 + A8_OFF
+gr_vyh		= $CF05 + A8_OFF
+gr_vzl		= $CF09 + A8_OFF
+gr_vzh		= $CF0D + A8_OFF
+gr_fuse_l	= $CF11 + A8_OFF
+gr_fuse_h	= $CF15 + A8_OFF
+gr_life_l	= $CF19 + A8_OFF
+gr_life_h	= $CF1D + A8_OFF
+sham_alert_ph	= $CF21 + A8_OFF			; flips each anim tick; 1 = hold Shambler alert or magic frame
+hit_dmg		= $CF22 + A8_OFF			; applied damage for the current damage_enemy call
+dodge_dx	= $CF23 + A8_OFF			; select_dodge_dir: signed dx toward player
+dodge_dz	= $CF24 + A8_OFF			; signed dz toward player
+dodge_i		= $CF25 + A8_OFF			; 0..4 probe index, live across enemy_probe_dir
 ; Hitscan params (live during gun_hitscan / splat_aim_jitter)
-scan_hit_x	= $CF26			; |sx−CX| max (inclusive)
-scan_hit_y	= $CF27			; |sy−64| max, $ff = no Y gate (both guns)
-scan_dmg_max	= $CF28			; SSG ceiling = this − (z>>1); nail = this − (z>>2)
-scan_dmg_all	= $CF29			; 1 = damage every cone hit (SSG)
-scan_jx_mask	= $CF2A			; splat rnd X mask
-scan_jx_bias	= $CF2B
-scan_jy_mask	= $CF2C
-scan_jy_bias	= $CF2D
+scan_hit_x	= $CF26 + A8_OFF			; |sx−CX| max (inclusive)
+scan_hit_y	= $CF27 + A8_OFF			; |sy−64| max, $ff = no Y gate (both guns)
+scan_dmg_max	= $CF28 + A8_OFF			; SSG ceiling = this − (z>>1); nail = this − (z>>2)
+scan_dmg_all	= $CF29 + A8_OFF			; 1 = damage every cone hit (SSG)
+scan_jx_mask	= $CF2A + A8_OFF			; splat rnd X mask
+scan_jx_bias	= $CF2B + A8_OFF
+scan_jy_mask	= $CF2C + A8_OFF
+scan_jy_bias	= $CF2D + A8_OFF
 ; Timed FX headers: +0 on/phase, +1 skip, +2 ms_l, +3 ms_h
 FXH_ON		= 0
 FXH_SKIP	= 1
 FXH_MS_L	= 2
 FXH_MS_H	= 3
 FXH_COUNT	= 5
-fxh_flash4	= $CF2E
+fxh_flash4	= $CF2E + A8_OFF
 flash_phase	= fxh_flash4 + FXH_ON	; sprite 4: 0 off, 1 yellow, 2 red
 flash_skip	= fxh_flash4 + FXH_SKIP
 flash_ms_l	= fxh_flash4 + FXH_MS_L
 flash_ms_h	= fxh_flash4 + FXH_MS_H
-fxh_flash5	= $CF32
+fxh_flash5	= $CF32 + A8_OFF
 flash5_phase	= fxh_flash5 + FXH_ON	; sprite 5 (nail right)
 flash5_skip	= fxh_flash5 + FXH_SKIP
 flash5_ms_l	= fxh_flash5 + FXH_MS_L
 flash5_ms_h	= fxh_flash5 + FXH_MS_H
-fxh_emuz	= $CF36
+fxh_emuz	= $CF36 + A8_OFF
 emuz_on		= fxh_emuz + FXH_ON	; 1 = sprite 6 enabled
 emuz_skip	= fxh_emuz + FXH_SKIP
 emuz_ms_l	= fxh_emuz + FXH_MS_L
 emuz_ms_h	= fxh_emuz + FXH_MS_H
-fxh_splat	= $CF3A
+fxh_splat	= $CF3A + A8_OFF
 splat_on	= fxh_splat + FXH_ON	; 1 = sprite 7 enabled
 splat_skip	= fxh_splat + FXH_SKIP
 splat_ms_l	= fxh_splat + FXH_MS_L
 splat_ms_h	= fxh_splat + FXH_MS_H
-fxh_explode	= $CF3E
+fxh_explode	= $CF3E + A8_OFF
 fx_on		= fxh_explode + FXH_ON	; 1 = explosion live
 fx_skip		= fxh_explode + FXH_SKIP
 fx_ms_l		= fxh_explode + FXH_MS_L
 fx_ms_h		= fxh_explode + FXH_MS_H
 ; Room whose pose banks are currently resident; $ff = none yet.
-stream_room	= $CF42
+stream_room	= $CF42 + A8_OFF
 ; Explosion particle vel — FX_N × vx/vy s8 (integrated at draw)
-fx_vx		= $CF43			; 24
-fx_vy		= $CF5B			; 24
+fx_vx		= $CF43 + A8_OFF			; 24
+fx_vy		= $CF5B + A8_OFF			; 24
 ; Scrag spit — 4 control + 3 axes (player 8.8, wrist 8.8).
 ; Axis stride 4: player lo, player hi, wrist lo, wrist hi. X, Y, Z.
 ; Tracer end is rebuilt at draw.
-spit_on		= $CF73
-spit_room	= $CF74
-spit_owner	= $CF75			; enemy index
-spit_flash	= $CF76			; 0 = tracer done, hitscan next update
-spit_axes	= $CF77
+spit_on		= $CF73 + A8_OFF
+spit_room	= $CF74 + A8_OFF
+spit_owner	= $CF75 + A8_OFF			; enemy index
+spit_flash	= $CF76 + A8_OFF			; 0 = tracer done, hitscan next update
+spit_axes	= $CF77 + A8_OFF
 spit_xl		= spit_axes		; player X lo at fire
 spit_xh		= spit_axes+1
 spit_oxl	= spit_axes+2		; wrist X
@@ -985,128 +961,126 @@ spit_zh		= spit_axes+9
 spit_ozl	= spit_axes+10		; wrist Z
 spit_ozh	= spit_axes+11
 spit_prod	= spit_axes+4		; 32-bit product, lo first. Y axis is dead once the hitscan runs.
-; $CF83-$CF84 free
+splat_src	= $CF83 + A8_OFF			; mode-E splat rows (21×3)
 ; Evicted from KERNAL ZP ($90–$bf / SETNAM $b7–$bc). Abs OK — not (ptr),y.
-wish_dx		= $CF85			; signed move intent X
-wish_dz		= $CF86
-wish_dxh	= $CF87			; wish 8.8 high
-wish_dzh	= $CF88
-save_xh		= $CF89
-save_zh		= $CF8A
-save_xl		= $CF8B
-save_zl		= $CF8C
-col_x		= $CF8D			; collision test point
-col_z		= $CF8E
-col_y		= $CF8F
-obj_i		= $CF90
-face_bits	= $CF91			; which box faces visible
-box_x		= $CF92			; box under test (line/point/draw). A nested load replaces it.
-box_y		= $CF93
-box_z		= $CF94
-box_sx		= $CF95
-box_sy		= $CF96
-box_sz		= $CF97
-msg_off		= $CF98			; offset into map_text
-vel_ms		= $CF99			; hold duration ms (lo)
-vel_msh		= $CF9A
-turn_acc_l	= $CF9B
-turn_acc_h	= $CF9C
-dt_msh		= $CF9D			; frame dt milliseconds (hi)
-inv_l		= $CF9E			; (FOCAL<<16)/(z>>k) lo, mesh project
-inv_h		= $CF9F
-inv_k		= $CFA0
-mesh_vmask	= $CFA1
-mesh_nwork	= $CFA2
-random8		= $CFA3
-scale_s		= $CFA4
-fn_lx		= $CFA5			; frustum inward normals (XZ)
-fn_lz		= $CFA6
-fn_rx		= $CFA7
-fn_rz		= $CFA8
-fn_fx		= $CFA9
-fn_fz		= $CFAA
-pv0		= $CFAB			; glyph / ramp / door fill
-pv1		= $CFAC
-pv2		= $CFAD
-pv3		= $CFAE
-pv4		= $CFAF
-col_bg		= $CFB0			; active room background → $d021
-col_fx		= $CFB1			; active room FX
-col_line	= $CFB2			; active room lines → colour RAM
-palette_room	= $CFB3			; last room_idx palette ($ff = none)
-far_scale	= $CFB4			; FOCAL/z integer, far enemy project
-col_wpn		= $CFB5			; weapon sprite colour → $d027–$d02a
-sfx_ch		= $CFB6			; current channel 0..2
-sfx_id		= $CFB7			; sound id / freq scratch
-sample_ms	= $CFB8			; PAL 20 / NTSC 17 — set at init
-ps_save_x	= $CFB9
-ps_save_y	= $CFBA
-door_blk	= $CFBB			; bit0 X slide blocked, bit1 Z
-mv0_xl		= $CFBC			; cam 8.8 at start of apply_move_world
-mv0_xh		= $CFBD
-mv0_zl		= $CFBE
-mv0_zh		= $CFBF
+wish_dx		= $CF85 + A8_OFF			; signed move intent X
+wish_dz		= $CF86 + A8_OFF
+wish_dxh	= $CF87 + A8_OFF			; wish 8.8 high
+wish_dzh	= $CF88 + A8_OFF
+save_xh		= $CF89 + A8_OFF
+save_zh		= $CF8A + A8_OFF
+save_xl		= $CF8B + A8_OFF
+save_zl		= $CF8C + A8_OFF
+col_x		= $CF8D + A8_OFF			; collision test point
+col_z		= $CF8E + A8_OFF
+col_y		= $CF8F + A8_OFF
+obj_i		= $CF90 + A8_OFF
+face_bits	= $CF91 + A8_OFF			; which box faces visible
+box_x		= $CF92 + A8_OFF			; box under test (line/point/draw). A nested load replaces it.
+box_y		= $CF93 + A8_OFF
+box_z		= $CF94 + A8_OFF
+box_sx		= $CF95 + A8_OFF
+box_sy		= $CF96 + A8_OFF
+box_sz		= $CF97 + A8_OFF
+msg_off		= $CF98 + A8_OFF			; offset into map_text
+vel_ms		= $CF99 + A8_OFF			; hold duration ms (lo)
+vel_msh		= $CF9A + A8_OFF
+turn_acc_l	= $CF9B + A8_OFF
+turn_acc_h	= $CF9C + A8_OFF
+dt_msh		= $CF9D + A8_OFF			; frame dt milliseconds (hi)
+inv_l		= $CF9E + A8_OFF			; (FOCAL<<16)/(z>>k) lo, mesh project
+inv_h		= $CF9F + A8_OFF
+inv_k		= $CFA0 + A8_OFF
+mesh_vmask	= $CFA1 + A8_OFF
+mesh_nwork	= $CFA2 + A8_OFF
+random8		= $CFA3 + A8_OFF
+scale_s		= $CFA4 + A8_OFF
+fn_lx		= $CFA5 + A8_OFF			; frustum inward normals (XZ)
+fn_lz		= $CFA6 + A8_OFF
+fn_rx		= $CFA7 + A8_OFF
+fn_rz		= $CFA8 + A8_OFF
+fn_fx		= $CFA9 + A8_OFF
+fn_fz		= $CFAA + A8_OFF
+pv0		= $CFAB + A8_OFF			; glyph / ramp / door fill
+pv1		= $CFAC + A8_OFF
+pv2		= $CFAD + A8_OFF
+pv3		= $CFAE + A8_OFF
+pv4		= $CFAF + A8_OFF
+col_bg		= $CFB0 + A8_OFF			; active room paper: Atari colour byte (editor-made) → COLPF0
+; $CFB1, $CFB2, $CFB5 were col_fx, col_line, col_wpn
+palette_room	= $CFB3 + A8_OFF			; last room_idx palette ($ff = none)
+far_scale	= $CFB4 + A8_OFF			; FOCAL/z integer, far enemy project
+sfx_ch		= $CFB6 + A8_OFF			; current channel 0..2
+sfx_id		= $CFB7 + A8_OFF			; sound id / freq scratch
+sample_ms	= $CFB8 + A8_OFF			; PAL 20 / NTSC 17 — set at init
+ps_save_x	= $CFB9 + A8_OFF
+ps_save_y	= $CFBA + A8_OFF
+door_blk	= $CFBB + A8_OFF			; bit0 X slide blocked, bit1 Z
+mv0_xl		= $CFBC + A8_OFF			; cam 8.8 at start of apply_move_world
+mv0_xh		= $CFBD + A8_OFF
+mv0_zl		= $CFBE + A8_OFF
+mv0_zh		= $CFBF + A8_OFF
 ; $CFC0+ free
-ai_code_lo	= $CFC0			; runtime code base while patching a bank
-ai_code_hi	= $CFC1
-ai_delta_lo	= $CFC2			; runtime code base - AI_LINK_BASE
-ai_delta_hi	= $CFC3
-ai_reloc_nlo	= $CFC4
-ai_reloc_nhi	= $CFC5
-ai_map_nlo	= $CFC6
-ai_map_nhi	= $CFC7
-ai_pose_lo	= $CFC8
-ai_pose_hi	= $CFC9
-ai_cmd		= $CFCA
-ai_field	= $CFCB
-rune_taken	= $CFCC			; 1 = rune of earth magic picked up
-ch_anim_phase	= $CFCD			; flips each anim tick; 1 = skip Chthon this step
-ch_crate	= $CFCE			; two crate SoA indices
-ch_home		= $CFD0			; home Y of each electrode
-ch_phase	= $CFD2			; 0 up, 1 lowering, 2 hold, 3 rising
-ch_acc_l	= $CFD4			; per-crate ms accumulator lo
-ch_acc_h	= $CFD6			; per-crate ms accumulator hi
-ch_bolt_l	= $CFD8			; lightning remaining
-ch_bolt_h	= $CFD9
-ch_req		= $CFDA			; 1 lower, 2 fire
-ch_trig		= $CFDB			; trigger SoA index for the request
-ch_shock	= $CFDC			; 1 = shockc loops until the bolt ends
-ch_enemy	= $CFDD			; Chthon index, $ff until the crates are cached
-ch_psx		= $CFDE			; electrode scratch
-ch_psy		= $CFDF
-ch_pok		= $CFE0
-ch_ax		= $CFE1			; bolt endpoints (crate centres)
-ch_ay		= $CFE2
-ch_az		= $CFE3
-ch_by		= $CFE4
-ch_bz		= $CFE5
-ch_best		= $CFE6
-ch_dist		= $CFE7
-ch_i		= $CFE8
-ch_prod		= $CFE9
-ch_prod_h	= $CFEA
+ai_code_lo	= $CFC0 + A8_OFF			; runtime code base while patching a bank
+ai_code_hi	= $CFC1 + A8_OFF
+ai_delta_lo	= $CFC2 + A8_OFF			; runtime code base - AI_LINK_BASE
+ai_delta_hi	= $CFC3 + A8_OFF
+ai_reloc_nlo	= $CFC4 + A8_OFF
+ai_reloc_nhi	= $CFC5 + A8_OFF
+ai_map_nlo	= $CFC6 + A8_OFF
+ai_map_nhi	= $CFC7 + A8_OFF
+ai_pose_lo	= $CFC8 + A8_OFF
+ai_pose_hi	= $CFC9 + A8_OFF
+ai_cmd		= $CFCA + A8_OFF
+ai_field	= $CFCB + A8_OFF
+rune_taken	= $CFCC + A8_OFF			; 1 = rune of earth magic picked up
+ch_anim_phase	= $CFCD + A8_OFF			; flips each anim tick; 1 = skip Chthon this step
+ch_crate	= $CFCE + A8_OFF			; two crate SoA indices
+ch_home		= $CFD0 + A8_OFF			; home Y of each electrode
+ch_phase	= $CFD2 + A8_OFF			; 0 up, 1 lowering, 2 hold, 3 rising
+ch_acc_l	= $CFD4 + A8_OFF			; per-crate ms accumulator lo
+ch_acc_h	= $CFD6 + A8_OFF			; per-crate ms accumulator hi
+ch_bolt_l	= $CFD8 + A8_OFF			; lightning remaining
+ch_bolt_h	= $CFD9 + A8_OFF
+ch_req		= $CFDA + A8_OFF			; 1 lower, 2 fire
+ch_trig		= $CFDB + A8_OFF			; trigger SoA index for the request
+ch_shock	= $CFDC + A8_OFF			; 1 = shockc loops until the bolt ends
+ch_enemy	= $CFDD + A8_OFF			; Chthon index, $ff until the crates are cached
+ch_psx		= $CFDE + A8_OFF			; electrode scratch
+ch_psy		= $CFDF + A8_OFF
+ch_pok		= $CFE0 + A8_OFF
+ch_ax		= $CFE1 + A8_OFF			; bolt endpoints (crate centres)
+ch_ay		= $CFE2 + A8_OFF
+ch_az		= $CFE3 + A8_OFF
+ch_by		= $CFE4 + A8_OFF
+ch_bz		= $CFE5 + A8_OFF
+ch_best		= $CFE6 + A8_OFF
+ch_dist		= $CFE7 + A8_OFF
+ch_i		= $CFE8 + A8_OFF
+ch_prod		= $CFE9 + A8_OFF
+ch_prod_h	= $CFEA + A8_OFF
 ; Shambler pain lock + bolt scratch. Ends at $CFFF (charset A is $D000).
-sham_arc	= $CFEB			; 1 = magic frames 5..7, V3 crackle
-sham_pain_i	= $CFEC			; locked enemy, $ff = none
-sham_pain_l	= $CFED
-sham_pain_h	= $CFEE
-sham_ax		= $CFEF			; segment start (chest)
-sham_ay		= $CFF0
-sham_az		= $CFF1
-sham_bx		= $CFF2			; segment end (player or blocker)
-sham_by		= $CFF3
-sham_bz		= $CFF4
-sham_hx		= $CFF5			; nearest blocker
-sham_hy		= $CFF6
-sham_hz		= $CFF7
-sham_best	= $CFF8			; nearest t, $ff = clear
-sham_i		= $CFF9
-sham_px		= $CFFA
-sham_py		= $CFFB
-sham_pz		= $CFFC
-sham_pok	= $CFFD
-sham_psx	= $CFFE
-sham_psy	= $CFFF
+sham_arc	= $CFEB + A8_OFF			; 1 = magic frames 5..7, V3 crackle
+sham_pain_i	= $CFEC + A8_OFF			; locked enemy, $ff = none
+sham_pain_l	= $CFED + A8_OFF
+sham_pain_h	= $CFEE + A8_OFF
+sham_ax		= $CFEF + A8_OFF			; segment start (chest)
+sham_ay		= $CFF0 + A8_OFF
+sham_az		= $CFF1 + A8_OFF
+sham_bx		= $CFF2 + A8_OFF			; segment end (player or blocker)
+sham_by		= $CFF3 + A8_OFF
+sham_bz		= $CFF4 + A8_OFF
+sham_hx		= $CFF5 + A8_OFF			; nearest blocker
+sham_hy		= $CFF6 + A8_OFF
+sham_hz		= $CFF7 + A8_OFF
+sham_best	= $CFF8 + A8_OFF			; nearest t, $ff = clear
+sham_i		= $CFF9 + A8_OFF
+sham_px		= $CFFA + A8_OFF
+sham_py		= $CFFB + A8_OFF
+sham_pz		= $CFFC + A8_OFF
+sham_pok	= $CFFD + A8_OFF
+sham_psx	= $CFFE + A8_OFF
+sham_psy	= $CFFF + A8_OFF
 CH_PHASE_UP	= 0
 CH_PHASE_DOWN	= 1
 CH_PHASE_HOLD	= 2

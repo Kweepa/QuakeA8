@@ -1,5 +1,5 @@
 ; Streamed crusher motion. Linked at AI_LINK_BASE, relocated on load.
-!cpu 6510
+!cpu 6502
 !to "../enemies/ai_crush.bin", plain
 !source "mem.asm"
 !source "zp.asm"

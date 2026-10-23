@@ -1,0 +1,20 @@
+{
+	"type": "ATSaveStateInfo",
+	"objects": [
+		{
+			"_type": "ATSaveStateInfo",
+			"thumbnail": 2,
+			"thumbnail_x1": 44,
+			"thumbnail_y1": 16,
+			"thumbnail_x2": 212,
+			"thumbnail_y2": 240,
+			"thumbnail_pixel_aspect": 0.85714101791381836,
+			"run_time_seconds": 86.977787400353961,
+			"cold_start_id": "263638730"
+		},
+		{
+			"_type": "ATSaveStateMemoryBuffer",
+			"_path": "thumbnail.png"
+		}
+	]
+}

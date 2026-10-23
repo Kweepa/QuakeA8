@@ -2484,7 +2484,7 @@ shotgun_miss_splat
 	ldy #64				; viewport centre = look
 	jsr splat_aim_jitter			; A/Y = centre ±jitter
 	sta rot2
-	lda col_line
+	lda #COL_SPLAT_MISS
 	sta splat_col
 	ldx rot0
 	lda rot2

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Scan game.prg for SMC map-accessor sites; prefix each map with overlay+reloc.
+"""Prefix each map with overlay + reloc from the smc_N labels.
 
-Macros in src/mapacc.asm emit abs,x / abs,y with operand hi = MAP_SMC_HI
-and lo = field id. This must run after ACME writes game.prg and overlay.bin
-(see build.bat). Reloc records are (dest_addr, field_id) triples.
+Macros in src/mapacc.asm emit abs,x / abs,y under a global smc_N label.
+Operand hi = MAP_SMC_HI, lo = field id. This must run after ACME writes
+game.prg and overlay.bin (see build-a8.bat). Reloc records are
+(dest_addr, field_id) triples. Only labeled sites are patched.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ ABS_OPS = ABS_X | ABS_Y
 
 LEVEL_NAMES = [f"e1m{i}" for i in range(1, 9)]
 HDR_LEN = 4  # overlay_len word + reloc_len word
+SMC_LABEL = re.compile(r"^smc_(\d+)$")
 
 
 def parse_mem_const(name: str) -> int:
@@ -51,47 +53,26 @@ def parse_labels(lbl: Path) -> dict[str, int]:
     return out
 
 
-def scan(
-    body: bytes, load: int, sentinel: int, max_id: int, targets: set[int] | None = None
-) -> list[tuple[int, int]]:
-    recs: list[tuple[int, int]] = []
-    i = 0
-    n = len(body)
-    while i + 2 < n:
-        op, lo, hi = body[i], body[i + 1], body[i + 2]
-        if (
-            op in ABS_OPS
-            and hi == sentinel
-            and lo in (0x20, 0x4C)
-            and targets
-            and i + 3 < n
-            and (body[i + 2] | (body[i + 3] << 8)) in targets
-        ):
-            # jsr/jmp to a label at $xx02 preceded by a zp operand that is an abs
-            # opcode: `sta $79` ($85 $79) + `jsr $4f02` ($20 $02 $4f) aliases
-            # adc $0220,y. The loader then patched the jsr (build 2:35, update_floor
-            # at $4f02 broke world_init, room palette never applied).
-            print(
-                f"mkreloc: skipped phantom site at ${load + i + 1:04X} "
-                f"(jsr/jmp ${body[i + 2] | (body[i + 3] << 8):04X})",
-                file=sys.stderr,
-            )
-            i += 1
-            continue
-        if op in ABS_OPS and hi == sentinel and lo <= max_id:
-            # Nobody emits eor_mx / eor_my ($5D / $59). Unaligned windows alias them:
-            #   adc abs,y ($79 id $5D) ; sta src_ptr ($85 $02) -> eor $0285,x
-            #   ldy oy0h/oy1h ($A4 $59/$5D) ; jsr $xx02 ($20 $02)
-            #     -> eor $0220,y / eor $0220,x
-            # The jsr form fires when .to_sy is at $xx02 and the loader then
-            # overwrites that jsr, so screen Y is the raw projected byte.
-            # Do not skip-3 on every abs op (that jumped real lda $02id,x).
-            if op not in (0x59, 0x5D):
-                recs.append((load + i + 1, lo))
-            i += 3
-            continue
-        i += 1
-    return recs
+def smc_sites(labels: dict[str, int]) -> list[int]:
+    """Opcode addresses of smc_N labels, ascending."""
+    addrs = [addr for name, addr in labels.items() if SMC_LABEL.match(name)]
+    addrs.sort()
+    if len(addrs) != len(set(addrs)):
+        raise SystemExit("two smc labels on one instruction")
+    return addrs
+
+
+def smc_field(code: bytes, base: int, addr: int, sentinel: int, what: str) -> int:
+    """Field id at a labeled accessor. base is the address of code[0]."""
+    off = addr - base
+    if off < 0 or off + 2 >= len(code):
+        raise SystemExit(f"{what}: smc at ${addr:04X} outside image")
+    op, lo, hi = code[off], code[off + 1], code[off + 2]
+    if op not in ABS_OPS or hi != sentinel:
+        raise SystemExit(
+            f"{what}: smc at ${addr:04X} is ${op:02X} ${lo:02X} ${hi:02X}, not a map accessor"
+        )
+    return lo
 
 
 def packed_from_level_prg(raw: bytes, overlay_len: int) -> bytes | None:
@@ -194,24 +175,18 @@ def main() -> None:
             print("map pointer table field id out of range", file=sys.stderr)
             sys.exit(1)
 
-    recs = scan(body, load, sentinel, max_id, set(labels.values()))
+    recs: list[tuple[int, int]] = []
+    for addr in smc_sites(labels):
+        fid = smc_field(body, load, addr, sentinel, "game")
+        if fid > max_id:
+            print(f"mkreloc: smc at ${addr:04X} field id {fid} past {last}", file=sys.stderr)
+            sys.exit(1)
+        recs.append((addr + 1, fid))
     if not recs:
-        print("mkreloc: zero SMC sites (macros not emitting sentinel?)", file=sys.stderr)
+        print("mkreloc: zero smc_ labels in the symbol file", file=sys.stderr)
         sys.exit(1)
     if len(recs) < 200:
         print(f"mkreloc: warning: only {len(recs)} sites (expected ~400+)", file=sys.stderr)
-
-    dests = {addr for addr, _fid in recs}
-    for off in range(len(body) - 2):
-        if body[off : off + 3] == bytes((0x5D, 0x85, 0x02)):
-            addr = load + off + 1
-            if addr in dests:
-                print(
-                    f"mkreloc: phantom SMC site at ${addr:04X} "
-                    "(sta src_ptr after $5Dxx abs,y)",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
 
     reloc = bytearray()
     reloc += struct.pack("<H", len(recs))

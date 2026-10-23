@@ -816,46 +816,6 @@ button:disabled {
   width: 100%;
 }
 
-.room-color-channels {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-}
-
-.room-color-channel {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 2rem;
-  padding: 0 0 2px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  color: #fff;
-  text-shadow: 0 0 2px #000, 0 1px 2px #000;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-.room-color-channel.active {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
-  border-color: #fff;
-}
-
-.room-color-channel.mixed {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--bg),
-    var(--bg) 3px,
-    var(--panel) 3px,
-    var(--panel) 6px
-  );
-  color: var(--muted);
-  text-shadow: none;
-}
-
 .color-swatches {
   display: flex;
   flex-wrap: nowrap;
@@ -1225,8 +1185,13 @@ button:disabled {
 
 .build-cols {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
+  align-items: start;
+}
+
+.build-cols > .build-section {
+  min-width: 0;
 }
 
 .build-mod {

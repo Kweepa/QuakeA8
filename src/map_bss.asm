@@ -43,9 +43,7 @@ room_sx	= $041E
 room_sy	= $0420
 room_sz	= $0422
 room_bg	= $0424
-room_line	= $0426
-room_fx	= $0428
-room_wpn	= $042A
+; $0426..$042B were room_line / room_fx / room_wpn
 ; (was room_id, unused)
 rc_x	= $042E
 rc_y	= $0430

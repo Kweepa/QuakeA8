@@ -121,6 +121,7 @@ def ident_from_path(path: str) -> str:
 
 SID_PHI2_NTSC = 1022727.0
 PC_TIMER = 1193181
+POKEY_64K_NTSC = 63921.0
 
 
 def fn_hi(pc_byte: int) -> int:
@@ -134,6 +135,31 @@ def fn_hi(pc_byte: int) -> int:
     hz = PC_TIMER / (pc_byte * 60)
     fn = hz * 16777216 / SID_PHI2_NTSC
     return min(255, int(fn) >> 8)
+
+
+def audf_from_fn_hi(fn: int) -> int:
+    """SID Fn hi (Fn lo fixed at $80) -> POKEY AUDF, NTSC 64 kHz pure tone."""
+    if fn <= 0:
+        return 0
+    sid = (fn << 8) | 0x80
+    hz = sid * SID_PHI2_NTSC / 16777216.0
+    if hz < 1.0:
+        return 255
+    n = int(round(POKEY_64K_NTSC / (2.0 * hz) - 1.0))
+    if n < 0:
+        return 0
+    if n > 255:
+        return 255
+    return n
+
+
+def stream_freq(pc_byte: int) -> int:
+    """PC inverse-freq byte -> POKEY AUDF. 0 stays silence so the player can beq."""
+    fn = fn_hi(pc_byte)
+    if fn <= 0:
+        return 0
+    n = audf_from_fn_hi(fn)
+    return n if n else 1
 
 
 def clamp_u8(n: int, lo: int, hi: int) -> int:
@@ -308,10 +334,9 @@ def main() -> None:
         # Resident aliases stay resident (game code plays them by name); every
         # other exported sound rides on the pose banks of the enemies whose cues name it.
         hosts = None if snd["path"] in LOCKED_PATHS else cue_hosts.get(snd["path"])
-        # N, AD|voice, priority, Fn-hi[N]. AD's decay nibble is always 0, so the
-        # low bits carry the mixer voice (player 0 / enemy 1 / world 2); the player masks
-        # it off before the SID write.
-        body = [n, ((snd["attack"] << 4) & 0xF0) | (snd["voice"] & 3), snd["priority"], *[fn_hi(f) for f in freq]]
+        # N, AD|voice, priority, AUDF[N]. 0 is silence. AD's decay nibble is always 0,
+        # so the low bits carry the mixer voice (player 0 / enemy 1 / world 2).
+        body = [n, ((snd["attack"] << 4) & 0xF0) | (snd["voice"] & 3), snd["priority"], *[stream_freq(f) for f in freq]]
         equates.append(f"SOUND_{name}\t= {local_i}")
         for extra in snd.get("extraAliases") or []:
             aliases.append(f"SOUND_{extra}\t= SOUND_{name}")

@@ -1,5 +1,7 @@
-; Cheat codes — probe only the next expected CIA1 matrix cell (col, row).
-; Called from accum_keys (raster mid-split). IRQ latches cheat_req;
+; Cheat codes. C64: next CIA1 matrix cell, from accum_keys.
+; Atari: SKSTAT key-down from the DLI and the VBI. IRQST bit 6 stays
+; inactive while IRQEN is 0, so it cannot be polled. A changed KBCODE
+; counts as a new press when the release fell between samples.
 ; apply_cheats on main does HUD, sound, and restart_level.
 ; Shared "id" prefix, then god / kfa / mapNN.
 !zone cheats
@@ -13,16 +15,15 @@ CHEAT_REQ_MAP	= 3
 
 ; god, kfa, map, three keys each. Index is the table offset; base/end
 ; bound it. Digits are a separate 1..9 pair.
-cheat_col	!byte $f7, $ef, $fb			; G O D
-		!byte $ef, $fb, $fd			; K F A
-		!byte $ef, $fd, $df			; M A P
-cheat_row	!byte $04, $40, $04
-		!byte $20, $20, $04
-		!byte $10, $04, $02
+
+; POKEY KBCODE & $3F. Same positions a8_keys uses for 1..4.
+cheat_kc	!byte $3d, $08, $3a			; G O D
+		!byte $05, $38, $3f			; K F A
+		!byte $25, $3f, $0a			; M A P
+cheat_kc_dig	!byte $1f, $1e, $1a, $18, $1d, $1b, $33, $35, $30
+
 cheat_base	!byte 0, 3, 6
 cheat_end	!byte 3, 6, 9
-cheat_col_dig	!byte $7f, $7f, $fd, $fd, $fb, $fb, $f7, $f7, $ef
-cheat_row_dig	!byte $01, $08, $01, $08, $01, $08, $01, $08, $01
 
 cheat_msg_on	!text "godmode on",0
 cheat_msg_off	!text "godmode off",0
@@ -36,11 +37,37 @@ cheat_init
 	sta cheat_req
 	sta cheat_ep_latch
 	sta cheat_map_latch
+	sta cheat_kdown
 	jmp cheat_reset_all
 
+
+CHEAT_KC_I	= $0d
+CHEAT_KC_D	= $3a
+
+; DLI and VBI. SKSTAT bit 2 clear = a key is down. cheat_kdown is 0
+; after a sample saw the key up, else the last accepted code + 1.
+; A new code while the bit stays down is the release we did not sample.
 check_cheats
+	lda $d20f
+	and #$04
+	beq .down
+	lda #0
+	sta cheat_kdown
+	rts
+.down
+	lda $d209
+	and #$3f
+	clc
+	adc #1
+	cmp cheat_kdown
+	beq .rts
+	sta cheat_kdown
 	lda player_hp
 	beq .rts
+	lda cheat_kdown
+	sec
+	sbc #1
+	sta cheat_a
 	lda cheat_phase
 	beq .idle
 	cmp #CHEAT_GOT_I
@@ -48,35 +75,27 @@ check_cheats
 	jmp .after_id
 
 .idle
-	lda #$ef				; I
-	ldy #$02
-	ldx #0
-	jsr cheat_rise
-	bcc .rts
+	lda cheat_a
+	cmp #CHEAT_KC_I
+	bne .rts
 	lda #CHEAT_GOT_I
 	sta cheat_phase
-	lda #0
-	sta cheat_was
 .rts
 	rts
 
 .got_i
-	lda #$fb				; D
-	ldy #$04
-	ldx #0
-	jsr cheat_rise
-	bcc .rts
+	lda cheat_a
+	cmp #CHEAT_KC_D
+	bne .rts
 	jsr cheat_clear_suf
 	lda #CHEAT_AFTER_ID
 	sta cheat_phase
 	rts
 
 .after_id
-	lda #$ef				; another I restarts the prefix
-	ldy #$02
-	ldx #3
-	jsr cheat_rise
-	bcc .suf
+	lda cheat_a
+	cmp #CHEAT_KC_I			; another I restarts the prefix
+	bne .suf
 	jsr cheat_clear_suf
 	lda #CHEAT_GOT_I
 	sta cheat_phase
@@ -91,68 +110,60 @@ check_cheats
 	bcc .suf_lp
 	rts
 
-; ---------------------------------------------------------------------------
-; cheat_rise — A=col Y=row X=slot; C=1 on rising edge
-; ---------------------------------------------------------------------------
-cheat_rise
-	sta cheat_a
-	sty cheat_b
-	stx cheat_c
-	sta $dc00
-	lda $dc01
-	and cheat_b
-	beq .down
-	lda #0
-	beq .edge
-.down
-	lda #1
-.edge
-	ldx cheat_c
-	cmp cheat_was,x
-	sta cheat_was,x
-	beq .no
-	cmp #1
-	bne .no
-	sec
+; X = suffix 0..2. cheat_a = keycode. Map takes two digits once its
+; index reaches cheat_end. A miss does not reset the suffix.
+cheat_step
+	cpx #2
+	bne .st_let
+	lda cheat_map
+	cmp cheat_end + 2
+	bcs .st_dig
+.st_let
+	ldy cheat_god,x
+	lda cheat_kc,y
+	cmp cheat_a
+	bne .st_rts
+	inc cheat_god,x
+	lda cheat_god,x
+	cmp cheat_end,x
+	bne .st_rts
+	cpx #2
+	beq .st_rts			; letters done; digits are later presses
+	inx				; req = slot + 1
+	pla
+	pla				; drop cheat_step, rts back to the VBI
+	jmp cheat_latch
+.st_dig
+	ldy #0
+.std_lp
+	lda cheat_kc_dig,y
+	cmp cheat_a
+	beq .std_hit
+	iny
+	cpy #9
+	bcc .std_lp
 	rts
-.no
-	clc
+.std_hit
+	iny				; 1..9
+	lda cheat_map
+	cmp cheat_end + 2
+	bne .st_mapn
+	sty cheat_ep_dig
+	inc cheat_map
+	rts
+.st_mapn
+	sty cheat_map_dig
+	lda cheat_ep_dig
+	sta cheat_ep_latch
+	lda cheat_map_dig
+	sta cheat_map_latch
+	pla
+	pla
+	ldx #CHEAT_REQ_MAP
+	jmp cheat_latch
+.st_rts
 	rts
 
-; ---------------------------------------------------------------------------
-; cheat_dig_held — A = first held digit 1..9, or 0
-; cheat_dig_rise — A = digit on rising edge, else 0
-; ---------------------------------------------------------------------------
-cheat_dig_held
-	ldx #0
-.dh_loop
-	lda cheat_col_dig,x
-	sta $dc00
-	lda $dc01
-	and cheat_row_dig,x
-	beq .dh_hit
-	inx
-	cpx #9
-	bcc .dh_loop
-	lda #0
-	rts
-.dh_hit
-	txa
-	clc
-	adc #1
-	rts
-
-cheat_dig_rise
-	jsr cheat_dig_held
-	cmp cheat_dig_prev
-	sta cheat_dig_prev
-	beq .dr_no
-	cmp #0
-	beq .dr_no
-	rts				; A = 1..9
-.dr_no
-	lda #0
-	rts
 
 cheat_clear_suf
 	ldx #2
@@ -174,64 +185,6 @@ cheat_reset_all
 	lda #0
 	sta cheat_phase
 	rts
-
-; X = suffix 0..2 (also the cheat_was slot). Map takes two digits once
-; its index reaches cheat_end.
-cheat_step
-	cpx #2
-	bne .st_let
-	lda cheat_map
-	cmp cheat_end + 2
-	bcs .st_dig
-.st_let
-	ldy cheat_god,x
-	lda cheat_col,y
-	pha
-	lda cheat_row,y
-	tay
-	pla
-	jsr cheat_rise
-	ldx cheat_c
-	bcc .st_rts
-	inc cheat_god,x
-	lda cheat_god,x
-	cmp cheat_end,x
-	bne .st_rts
-	cpx #2
-	beq .st_seed
-	inx				; req = slot + 1
-	pla
-	pla				; drop cheat_step, reset rts to the IRQ
-	jmp cheat_latch
-.st_seed
-	jsr cheat_dig_held		; held keys are not a rising edge
-	sta cheat_dig_prev
-	ldx #2
-.st_rts
-	rts
-
-.st_dig
-	stx cheat_c
-	jsr cheat_dig_rise
-	beq .std_back
-	ldx cheat_map
-	cpx cheat_end + 2
-	bne .st_mapn
-	sta cheat_ep_dig
-	inc cheat_map
-.std_back
-	ldx cheat_c
-	rts
-.st_mapn
-	sta cheat_map_dig
-	lda cheat_ep_dig
-	sta cheat_ep_latch
-	lda cheat_map_dig
-	sta cheat_map_latch
-	pla
-	pla
-	ldx #CHEAT_REQ_MAP
-	jmp cheat_latch
 
 ; X = CHEAT_REQ_*. Ignore it when one is already waiting.
 cheat_latch

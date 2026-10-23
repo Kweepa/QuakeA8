@@ -1,8 +1,8 @@
 import { pickRepoDirectory, readRepoFile, repoFolderName, tryRestoreRepoDir } from "./io.js";
 
 const REPORT_NAME = "build-report.json";
-const VARIANT_ORDER = ["kernal", "krill"];
-const VARIANT_LABEL = { kernal: "KERNAL", krill: "Krill" };
+const VARIANT_ORDER = ["a8"];
+const VARIANT_LABEL = { a8: "A8" };
 
 const panel = document.getElementById("build-panel");
 
@@ -143,7 +143,7 @@ function addCards(parent, data) {
   for (const name of Object.keys(disks)) {
     const disk = disks[name];
     if (!disk || disk.free == null) continue;
-    addCard(parent, name, `${disk.free} blocks free`, Number(disk.free) <= 0);
+    addCard(parent, name, `${disk.free} sectors free for ED/1050 disk`, Number(disk.free) <= 0);
   }
 }
 
@@ -273,7 +273,6 @@ function addLevels(parent, data) {
   const rows = levelRows(data);
   if (!rows.length) return;
   const splitSlack = fieldDiffers(data, "slack");
-  const splitNeed = fieldDiffers(data, "need");
   const section = el("section", "build-section");
   section.append(el("h2", null, "Levels"));
   const first = keys[0];
@@ -286,19 +285,14 @@ function addLevels(parent, data) {
   const head = el("tr");
   head.append(el("th", null, "Level"));
   head.append(el("th", "bar-cell", ""));
-  head.append(el("th", "num", "Map"));
-  head.append(el("th", null, "Worst"));
-  head.append(el("th", "num", "Assets"));
-  if (splitNeed) {
-    for (const key of keys) head.append(el("th", "num", `Need ${variantLabel(key)}`));
-  } else {
-    head.append(el("th", "num", "Need"));
-  }
   if (splitSlack) {
     for (const key of keys) head.append(el("th", "num", variantLabel(key)));
   } else {
     head.append(el("th", "num", "Slack"));
   }
+  head.append(el("th", null, "Worst"));
+  head.append(el("th", "num", "Map"));
+  head.append(el("th", "num", "Assets"));
   const thead = el("thead");
   thead.append(head);
   table.append(thead);
@@ -320,17 +314,6 @@ function addLevels(parent, data) {
       );
     }
     tr.append(barCell);
-    tr.append(numCell(base ? String(base.map_bytes) : ""));
-    tr.append(el("td", null, worstText(base)));
-    tr.append(numCell(base ? String(base.room_assets) : ""));
-    if (splitNeed) {
-      for (const key of keys) {
-        const lv = row.cells[key];
-        tr.append(numCell(lv ? String(lv.need) : ""));
-      }
-    } else {
-      tr.append(numCell(base ? String(base.need) : ""));
-    }
     if (splitSlack) {
       for (const key of keys) {
         const lv = row.cells[key];
@@ -341,6 +324,9 @@ function addLevels(parent, data) {
       const slack = base ? Number(base.slack) : NaN;
       tr.append(numCell(base ? slackText(slack) : "", Number.isFinite(slack) && slack <= 0));
     }
+    tr.append(el("td", null, worstText(base)));
+    tr.append(numCell(base ? String(base.map_bytes) : ""));
+    tr.append(numCell(base ? String(base.room_assets) : ""));
     body.append(tr);
   }
   table.append(body);
@@ -349,15 +335,16 @@ function addLevels(parent, data) {
 }
 
 function addAdvanced(parent, data) {
-  const kernal = data?.variants?.kernal;
-  if (!kernal || typeof kernal !== "object") return;
-  const modules = Array.isArray(kernal.modules) ? kernal.modules : [];
+  const keys = variantKeys(data);
+  const variant = keys.length ? data.variants[keys[0]] : null;
+  if (!variant || typeof variant !== "object") return;
+  const modules = Array.isArray(variant.modules) ? variant.modules : [];
   const section = el("section", "build-section build-advanced");
   section.append(el("h2", null, "Advanced"));
-  section.append(el("p", "build-empty", "KERNAL build, by size."));
+  section.append(el("p", "build-empty", "By size."));
   const hasSymbols = modules.some((mod) => Array.isArray(mod.symbols));
   if (!modules.length || !hasSymbols) {
-    section.append(el("p", "build-empty", "Rebuild to list KERNAL symbols."));
+    section.append(el("p", "build-empty", "Rebuild to list symbols."));
     parent.append(section);
     return;
   }
@@ -408,15 +395,14 @@ function addBanks(parent, data) {
   const head = el("tr");
   head.append(el("th", null, "Name"));
   head.append(el("th", "bar-cell", ""));
-  for (const label of ["Bank", "Code", "Pose", "Reloc", "Map"]) head.append(el("th", "num", label));
+  for (const label of ["Bank", "Code", "Pose"]) head.append(el("th", "num", label));
   const thead = el("thead");
   thead.append(head);
   table.append(thead);
+  const scale = banks.reduce((n, bank) => Math.max(n, Number(bank.bank) || 0), 1);
   const body = el("tbody");
   for (const bank of banks) {
     const size = Number(bank.bank) || 0;
-    const max = Number(bank.max) || 1;
-    const over = size > max;
     const tr = el("tr");
     tr.append(el("td", null, bank.name || ""));
     const barCell = el("td", "bar-cell");
@@ -428,27 +414,18 @@ function addBanks(parent, data) {
           { cls: "seg-reloc", bytes: (Number(bank.reloc) || 0) * 2 },
           { cls: "seg-sites", bytes: (Number(bank.map) || 0) * 2 },
         ],
-        max
+        scale
       )
     );
     tr.append(barCell);
-    tr.append(numCell(`${size} / ${max}`, over));
+    tr.append(numCell(String(size)));
     tr.append(numCell(String(bank.code ?? "")));
     tr.append(numCell(String(bank.pose ?? "")));
-    tr.append(numCell(String(bank.reloc ?? "")));
-    tr.append(numCell(String(bank.map ?? "")));
     body.append(tr);
   }
   table.append(body);
   section.append(table);
   parent.append(section);
-}
-
-function freeLabel(base, krill) {
-  if (base?.free == null && krill?.free == null) return "";
-  if (base?.free == null) return `${krill.free} free`;
-  if (krill?.free == null || krill.free === base.free) return `${base.free} free`;
-  return `${base.free} free · krill ${krill.free}`;
 }
 
 function addDisks(parent, data) {
@@ -463,8 +440,10 @@ function addDisks(parent, data) {
     return Math.max(n, a, b);
   }, 1);
   const section = el("section", "build-section");
-  const free = freeLabel(base, krill);
-  section.append(el("h2", null, free ? `Disk · ${free}` : "Disk"));
+  const free = base?.free ?? krill?.free;
+  section.append(
+    el("h2", null, free == null ? "Disk" : `${free} sectors free for ED/1050 disk`)
+  );
   const list = el("div", "build-mods");
   for (const row of rows) {
     const blocks = Math.max(Number(row.base?.blocks) || 0, Number(row.other?.blocks) || 0);
@@ -535,8 +514,10 @@ function render() {
   addModules(split, report);
   addDisks(split, report);
   if (split.childElementCount) panel.append(split);
-  addLevels(panel, report);
-  addBanks(panel, report);
+  const tables = el("div", "build-cols");
+  addLevels(tables, report);
+  addBanks(tables, report);
+  if (tables.childElementCount) panel.append(tables);
   addAdvanced(panel, report);
 }
 
