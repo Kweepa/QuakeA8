@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "quake.atr"
+OUT = ROOT / "quakea8.atr"
 
 SECTOR = 128
 SECTORS = 1040

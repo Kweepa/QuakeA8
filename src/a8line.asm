@@ -33,33 +33,28 @@ a8_pair
 	!byte $c0,$30,$0c,$03
 
 ; colptr = bmp + y*32 + 4 + (x>>2). x is a colour-clock pixel. Uses x0,y0.
+; BMP_A/BMP_B are page aligned on a 4K boundary: bmp_lo is 0 and bmp_hi's low
+; nibble is 0. Low byte (y&7)<<5 + x>>2 + 4 <= 251, so no carry; hi = y>>3 | bmp_hi.
 a8_addr
-	lda #0
-	sta colptr+1
 	lda y0
+	asl
+	asl
+	asl
+	asl
+	asl
 	sta colptr
-	ldx #5
--
-	asl colptr
-	rol colptr+1
-	dex
-	bne -
 	lda x0
 	lsr
 	lsr
 	clc
-	adc #BMP_MARGIN
 	adc colptr
+	adc #BMP_MARGIN
 	sta colptr
-	lda colptr+1
-	adc #0
-	sta colptr+1
-	clc
-	lda colptr
-	adc bmp_lo
-	sta colptr
-	lda colptr+1
-	adc bmp_hi
+	lda y0
+	lsr
+	lsr
+	lsr
+	ora bmp_hi
 	sta colptr+1
 	rts
 

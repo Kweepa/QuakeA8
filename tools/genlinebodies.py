@@ -7,30 +7,32 @@ A8_OUT = Path(__file__).resolve().parents[1] / "src" / "_a8line_bodies.asm"
 
 
 def y_step(down: bool) -> str:
-    """±32 on colptr via ey_dn/ey_up. Clobbers A. Leaves C set."""
+    """±32 on colptr via ey_dn/ey_up. Clobbers A. C=1 on entry and exit."""
     return "\tjsr ey_dn\n" if down else "\tjsr ey_up\n"
 
 
 def y_subs() -> str:
-    return """ey_dn
-	clc
+    # Every caller arrives with C=1: the error update's adc always wraps (the
+    # true sum e-d1+d2 >= 0 with d2 >= d1), and dex/inc/lda/ora/sta keep C.
+    return """; C=1 on entry and exit
+ey_dn
 	lda colptr
-	adc #32
+	adc #31
 	sta colptr
 	bcc ey_dn1
 	inc colptr+1
+	rts
 ey_dn1
 	sec
 	rts
 ey_up
-	sec
 	lda colptr
 	sbc #32
 	sta colptr
 	bcs ey_up1
 	dec colptr+1
-ey_up1
 	sec
+ey_up1
 	rts
 """
 

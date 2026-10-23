@@ -9,7 +9,6 @@ COL_HURT_A8	= $40
 pot_prev	!byte $e0
 stick_bits	!byte 0
 dli_phase	!byte 0
-dli_seam	!byte 0				; blank-line DLI index (0, or 5 with the mouse on)
 dli_paper	!byte 0				; seam colours, set by the VBI
 dli_ink		!byte 0
 m_snap		!byte 0				; read_input copy of mouse_turn
@@ -124,31 +123,35 @@ a8_nmi
 	and #$c0
 	cmp #$80				; DLI only
 	bne .nm_slow
+	; Phases: mouse off stat/msg/seam = 0/1/2, mouse on = 1/3/4.
+	lda mouse_en
+	beq .nm_off
 	lda dli_phase
-	cmp dli_seam
+	cmp #4
+	beq .nm_seam
+	lda $d40b
+	cmp #SEAM_VC
+	beq .nm_seam
+	jmp .nm_rest_on
+.nm_off
+	lda dli_phase
+	cmp #2
 	beq .nm_seam
 	lda $d40b				; a slipped phase still finds the seam line
 	cmp #SEAM_VC
 	beq .nm_seam
-	; Mouse sample DLI (these only exist with the mouse on): A and X only.
-	inc dli_phase
-	sta $d40f				; ack
-	txa
-	pha
-	jsr mouse_poll_go
-	pla
-	tax
-	pla
-	rti
+	jmp .nm_rest_off
 .nm_seam
-	lda dli_seam
-	clc
-	adc #1
-	sta dli_phase
 	sta $d40f				; ack
 	lda #$21				; narrow playfield, no players
 	sta $d40a				; WSYNC
 	sta $d400
+	lda mouse_en
+	beq +
+	lda #5					; seam phase 4
+	bne ++
++	lda #3					; seam phase 2
+++	sta dli_phase
 	lda dli_paper
 	sta $d016				; COLPF0 paper (pixel 01). COLBK stays black
 	lda dli_ink
@@ -176,6 +179,60 @@ dli_blood
 a8_nmi_out
 	pla
 	tay
+	pla
+	tax
+	pla
+	rti
+
+.nm_rest_on
+	lda dli_phase
+	cmp #1
+	beq .nm_stat
+	cmp #3
+	beq .nm_msg
+	bne .nm_samp
+.nm_rest_off
+	lda dli_phase
+	beq .nm_stat				; phase 0
+	cmp #1
+	beq .nm_msg
+.nm_samp
+	; Mouse sample only (top blank, nail row, bitmap). Top and nail exist with the mouse on.
+	inc dli_phase
+	sta $d40f				; ack
+	txa
+	pha
+	jsr mouse_poll_go
+	pla
+	tax
+	pla
+	rti
+.nm_stat
+	inc dli_phase
+	sta $d40f
+	lda #HUD_PF2_STAT
+	sta $d40a				; WSYNC: gap under the map, then the stat rows
+	sta $d018
+	lda #HUD_PF1_STAT
+	sta $d017
+	txa
+	pha
+	jsr mouse_poll
+	pla
+	tax
+	pla
+	rti
+.nm_msg
+	inc dli_phase
+	sta $d40f
+	lda #HUD_PF2_STAT
+	sta $d40a
+	sta $d018
+	lda #HUD_PF1_MSG
+	sta $d017
+	txa
+	pha
+	jsr mouse_poll
 	pla
 	tax
 	pla
@@ -289,9 +346,9 @@ hurt_col
 	and #$f0
 	ora #$0e
 	sta dli_ink
-	lda #0
-	sta $d018				; HUD background
-	lda #$0e
+	lda #HUD_PF2_TOP			; orange hue, lum 0: title and map
+	sta $d018
+	lda #HUD_PF1_TOP
 	sta $d017
 	lda #$22				; normal 40-col width, no players
 	ldx den_arm				; 1 = hold DMA off until main publishes

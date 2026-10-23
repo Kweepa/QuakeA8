@@ -4,10 +4,8 @@
 !zone hud
 
 init_hud
-	; rows 0–7 (320 bytes): spaces + orange colour (matrix A only)
-	; Atari: not sta $0200,x — hi $02 is the map reloc sentinel.
-	lda #HUD_CH_SP
-
+	; Seven stored rows, 280 bytes. Not sta $0200,x — hi $02 is the
+	; map reloc sentinel. The tail is $0300.
 	lda #<HUD_SCR
 	sta init_ptr
 	lda #>HUD_SCR
@@ -17,23 +15,11 @@ init_hud
 -	sta (init_ptr),y
 	iny
 	bne -
-
 	ldx #0
 -	sta HUD_SCR + 256,x
 	inx
-	cpx #64
+	cpx #24					; 256 + 24 = 7 * 40
 	bne -
-
-	; row 8: the HUD→view seam. Solid glyph, black: .view (irq.asm) switches
-	; charset and $d021 inside it, and the solid bar hides both.
-	ldx #39
--	lda #HUD_CH_SP
-
-	sta HUD_SCR + (VIEW_ROW - 1) * 40,x
-	lda #COL_OUTSIDE
-
-	dex
-	bpl -
 
 	ldx #0
 
@@ -147,11 +133,11 @@ init_hud
 
 
 	lda #HUD_CH_R
-	sta HUD_SCR + HUD_OFF2
+	sta HUD_SCR + HUD_OFF_MAP
 	lda #HUD_CH_P
-	sta HUD_SCR + HUD_OFF2 + 4
+	sta HUD_SCR + HUD_OFF_MAP + 4
 	lda #HUD_CH_K
-	sta HUD_SCR + HUD_OFF2 + 8
+	sta HUD_SCR + HUD_OFF_MAP + 8
 	lda #COL_HUD_DIM
 
 
@@ -193,7 +179,7 @@ hud_ch	!byte 0
 
 ; Row 0: R/P/K/D/C/U milliseconds. D is unused (lines are inside K).
 ; C is clear. U is everything after the last clip.
-; Row 2: R/P/K vertex and edge counts.
+; Map line: R/P/K vertex and edge counts.
 hud_print
 !if  HUD_FRAME_MS = 1 {
 	ldx #0
@@ -509,7 +495,7 @@ hud_ammo
 
 }
 
-; A:Y = 16-bit → 3 ASCII digits; saturate 999. .dec3 → HUD_OFF, .dec3n → HUD_OFF3
+; A:Y = 16-bit → 3 ASCII digits; saturate 999. .dec3 → HUD_OFF, .dec3n → map line
 !if  HUD_FRAME_MS = 1 {
 .dec3
 	stx pp_col

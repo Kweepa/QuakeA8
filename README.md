@@ -1,14 +1,12 @@
-# Quake on the Atari 800XL
+# Quake on the Atari 8-bit
 
-A line-drawn *Quake* demake for the Atari 8-bit: portal rooms, stick-figure enemies, and a mode-E world. The playable disk is `quake.atr`. Boot it in Altirra (800XL, 64K). The menu starts **E1M1**.
+A line-drawn *Quake* demake for the Atari 8-bit: portal rooms, stick-figure enemies, and a mode-E world. The playable disk is `quakea8.atr`. Boot it in Altirra (800XL, 64K). The menu starts **E1M1**.
 
 ## Display
 
 The 3D view is a **mode-E** window under a 9-row text HUD. The world is still projected at 192×128; the plotter keeps every other column, so 96 colour-clock pixels are drawn in the middle of each 32-byte row. Two bitmaps (`$C000` and `$E000`) swap each frame. Lines are unrolled Bresenham bodies in `a8line.asm`.
 
 The HUD is the text window: title, map name, shells / nails / grenades, health, armour, and a powerup icon. Pickup names and trigger messages flash on a status line. Frame time in ms can sit on row 0.
-
-## World
 
 ## World
 
@@ -41,11 +39,10 @@ SFX are PC-speaker envelopes on POKEY channels (player / enemy / world).
 6502 (ACME) plus Python table generators. Copy `setup-env.example.bat` to `setup-env.bat` and point `ACME` at your install.
 
 ```bat
-build-a8.bat       :: generate listings, assemble PRGs, write quake.atr
-make.bat           :: build-a8.bat, then boot quake.atr in Altirra
-run-game.bat       :: boot quake.atr in Altirra
+build-a8.bat       :: generate listings, assemble PRGs, write quakea8.atr
+make.bat           :: build-a8.bat, then boot quakea8.atr in Altirra
+run-game.bat       :: boot quakea8.atr in Altirra
 run-editor.bat     :: local map / skeleton / item editor
 ```
 
-Keys: **WASD** move / strafe, **J/L** turn, **K** use, **SPACE** fire, **1–4** axe / shotgun / nailgun / grenade launcher. Enable the mouse in Options to turn and shoot.
-
+Controls: joystick to move and fire. Button 2 strafes. Enable an ST mouse in Options to turn and shoot.

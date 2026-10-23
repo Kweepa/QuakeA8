@@ -613,7 +613,8 @@ cube_project
 	ldx #NV_PROJ
 	jsr prof_add_nv
 }
-	ldx #15
+	ldx mesh_nv			; column ids are first-appearance, so < mesh_nv
+	dex
 	lda #0
 .mp_clr
 	sta COL_DONE,x
@@ -647,8 +648,6 @@ cube_project
 .col_calc
 	jsr .invz			; z_eye set by .zbcam
 	ldx cur_col
-	lda inv_l
-	sta COL_INVL,x
 	lda inv_h
 	sta COL_INVH,x
 	lda inv_k
@@ -669,13 +668,10 @@ cube_project
 	jmp .col_py
 .col_front
 	ldy cur_col			; reuse cached reciprocal
-	lda COL_INVL,y
-	sta inv_l
-	lda COL_INVH,y
-	sta inv_h
 	lda COL_INVK,y
 	sta inv_k
-	lda inv_h
+	lda COL_INVH,y
+	sta inv_h
 	jsr mulset_au
 .col_py
 	ldx vindex
@@ -764,35 +760,28 @@ vert_hoist
 .vh_rts
 	rts
 
-; C=1 if this vertex z8.8 < ZCLIP
+; C=1 if this vertex z8.8 < ZCLIP. Always loads z_eye / z_eye_h.
+; ZCLIP lo = 0, so z >= ZCLIP is just z_eye_h >= >ZCLIP (unsigned, bit 7 clear).
+!if <ZCLIP != 0 {
+	!error ".zbcam compares the high byte only"
+}
 .zbcam
 	ldx vindex
+	lda CAM_Z,x
+	sta z_eye
 	lda CAM_ZH,x
+	sta z_eye_h
 	bmi .zby
 	cmp #>ZCLIP
 	bcc .zby
-	bne .zbn
-	lda CAM_Z,x
-	cmp #<ZCLIP
-	bcc .zby
-.zbn
-	jsr .setz
 	clc
 	rts
 .zby
 	sec
 	rts
 
-.setz
-	ldx vindex
-	lda CAM_Z,x
-	sta z_eye
-	lda CAM_ZH,x
-	sta z_eye_h
-	rts
-
 ; inv = (FOCAL<<16) / (z>>k), k = unsigned 8-bit fit of z_eye (always ≥128 here).
-; z >= ZCLIP guarantees z_eye_h >= 1, so dlo lands in [128,255] → invzl/h LUT.
+; z >= ZCLIP guarantees z_eye_h >= 1, so dlo lands in [128,255] → invzh LUT.
 proj_invz
 .invz
 	lda z_eye
@@ -811,8 +800,6 @@ proj_invz
 	lda dlo
 	and #$7f
 	tax
-	lda invzl,x
-	sta inv_l
 	lda invzh,x
 	sta inv_h
 	rts

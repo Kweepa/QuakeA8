@@ -356,6 +356,7 @@ scale_nd
 	rts
 
 ; div_n0:div_n1 = (ylo:yhi * nlo) / dlo after scale_nd; A = div_n0.
+; Needs |n| <= |d| (interpolation fraction in 0..1; larger n gives y*255/256).
 ; Signed, no ±127 clamp. Does not touch rot*.
 lerp16
 	lda #0
@@ -401,24 +402,46 @@ lerp16
 	sta div_n1
 	rts
 .mul
+	; t = (n<<8)/d as 8 bits, then |y|*t>>8. The clip point lies between the
+	; endpoints so n <= d; scale_nd leaves |d| <= 128, so rem*2 never carries.
+	lda nlo
+	ldx #8
+	cmp dlo
+	bcc .dv
+	lda #$ff			; n >= d: t = 255/256
+	sta div_n2
+	bne .tm
+.dv
+	asl
+	cmp dlo
+	bcc +
+	sbc dlo
++
+	rol div_n2
+	dex
+	bne .dv
+	asl				; round t up when the remainder is >= d/2 (not past 255)
+	cmp dlo
+	bcc .tm
+	inc div_n2
+	bne .tm
+	dec div_n2
+.tm
 	lda ylo
-	ldy nlo
+	ldy div_n2
 	jsr umul8j
-	lda prod_l
-	sta div_n0
 	lda prod_h
-	sta div_n1
+	sta div_n0
 	lda yhi
-	ldy nlo
+	ldy div_n2
 	jsr umul8j
 	clc
-	lda div_n1
-	adc prod_l
-	sta div_n1
+	lda prod_l
+	adc div_n0
+	sta div_n0
 	lda prod_h
 	adc #0
-	sta div_n2
-	jsr div24u8
+	sta div_n1
 	bit mul_sign
 	bpl .ok
 	sec

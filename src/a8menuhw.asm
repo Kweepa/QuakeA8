@@ -650,7 +650,7 @@ a8_ptr_down
 .pd
 	rts
 
-; Cell-ordered title art → linear bitmap, then the white glints.
+; Cell-ordered title art → linear bitmap, then the yellow glints.
 !zone
 a8_blit_title
 	lda #<menu_title_data
@@ -1193,9 +1193,77 @@ a8_menu_exit
 	sta A8_NMIEN
 	sta A8_DMACTL
 	sta A8_GRACTL
+	jsr a8_stage_dl
 	lda #$ff
 	sta $d301
 	rts
+
+; Game display list, staged above LoadPrg's $C000 context pages. The game
+; copies it to DL after the OS page snapshot. JVB target is filled there.
+!zone
+a8_stage_dl
+	lda #<GAME_DL_STAGE
+	sta ptr_l
+	lda #>GAME_DL_STAGE
+	sta ptr_h
+	ldx #0
+-	lda a8_game_dl,x
+	jsr a8_dl_byte
+	inx
+	cpx #a8_game_dl_n
+	bne -
+	lda mouse_en
+	beq .nom
+	lda #$f0				; top blank + DLI
+	sta GAME_DL_STAGE
+	lda #$82				; nails + DLI
+	sta GAME_DL_STAGE + 7
+.nom
+	lda #<BMP_A
+	jsr a8_dl_byte
+	lda #>BMP_A
+	jsr a8_dl_byte
+	ldx #0
+.bmp
+	lda mouse_en
+	beq .be
+	txa
+	and #15
+	cmp #15
+	bne .be
+	lda #$8e				; every 16th bitmap line
+	bne .bw
+.be
+	lda #$0e
+.bw
+	jsr a8_dl_byte
+	inx
+	cpx #127
+	bne .bmp
+	lda #$41				; JVB
+	jsr a8_dl_byte
+	lda #0
+	jsr a8_dl_byte
+	jmp a8_dl_byte
+
+a8_game_dl
+	!byte $70				; 8 blanks (16 with dl_top)
+	!byte $42				; mode 2 + LMS
+	!word HUD_SCR				; title
+	!byte $82				; map + DLI
+	!byte $70				; 8 blanks
+	!byte $02				; shells
+	!byte $02				; nails
+	!byte $82				; grenades + DLI
+	!byte $70				; 8 blanks
+	!byte $02				; message
+	!byte $02				; seam
+	!byte $80				; 1 blank + DLI
+	!byte $4e				; mode E + LMS
+a8_game_dl_n	= * - a8_game_dl
+!if a8_game_dl_n != 14 {
+	!error "game display-list head must stay 14 so DL_LMS is DL+14"
+}
 
 !zone
 a8_quit

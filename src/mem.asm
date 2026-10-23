@@ -71,22 +71,32 @@ D018_B_UI	= $1E			; unused — HUD is not flipped with the viewport
 
 UI_CHARSET	= $F800
 UI_FONT_PAGES	= 8			; 256 glyphs, ASCII-indexed from quakefont.png
-; 40-col HUD (rows 0–8 above VIEW_ROW):
-;  0FFF              Quake64
-;  1          The Slipgate Complex
-;  2                             
-;  3        S000   Health  Armour  PU
-;  4        N000                   PU
-;  5        G000    100     000  Damage
-;  7                  trigger message
+; 40-col HUD. Seven stored rows; the two gaps are ANTIC $70 blanks
+; and do not advance the memory scan.
+;  0FFF              Quake64          orange
+;  1          The Slipgate Complex   orange
+;    (8 blank lines)
+;  2        S000   Health  Armour  PU
+;  3        N000                   PU
+;  4        G000    100     000  Damage
+;    (8 blank lines)
+;  5                  trigger message   brighter yellow
+;  6 seam
 HUD_ROW		= 0			; frame ms FFF
 HUD_ROW_TITLE	= 0			; "Quake64" (same row as FFF)
 HUD_ROW_MAP	= 1			; map display name
-HUD_ROW2	= 2			; HUD_POS / PROFILE verts
-HUD_ROW_SHELL	= 3
-HUD_ROW_NAIL	= 4
-HUD_ROW_GREN	= 5			; grenades + health / armour values
-HUD_ROW4	= 7			; trigger message
+HUD_ROW_SHELL	= 2
+HUD_ROW_NAIL	= 3
+HUD_ROW_GREN	= 4			; grenades + health / armour values
+HUD_ROW4	= 5			; trigger message
+HUD_ROW_SEAM	= 6
+HUD_ROW2	= HUD_ROW_SHELL		; HUD_POS writes this row
+; Mode 2 takes hue from PF2 and luminance from PF1. Lum $E is the top.
+HUD_PF2_TOP	= $20			; orange, lum 0 (bar stays black)
+HUD_PF1_TOP	= $0e
+HUD_PF2_STAT	= $10			; yellow
+HUD_PF1_STAT	= $0d			; one below the message
+HUD_PF1_MSG	= $0e
 HUD_COL		= 0
 HUD_OFF		= HUD_ROW * 40 + HUD_COL
 HUD_OFF_TITLE	= HUD_ROW_TITLE * 40 + HUD_COL
@@ -95,7 +105,7 @@ HUD_OFF2	= HUD_ROW2 * 40 + HUD_COL
 HUD_OFF_SHELL	= HUD_ROW_SHELL * 40 + HUD_COL
 HUD_OFF_NAIL	= HUD_ROW_NAIL * 40 + HUD_COL
 HUD_OFF_GREN	= HUD_ROW_GREN * 40 + HUD_COL
-HUD_OFF3	= HUD_OFF2		; PROFILE vertex counts
+HUD_OFF3	= HUD_OFF_MAP		; PROFILE vertex counts, on the map line
 HUD_OFF4	= HUD_ROW4 * 40 + HUD_COL
 HUD_TITLE_COL	= 16
 HUD_AMMO_ICON	= 8
@@ -625,6 +635,11 @@ WPN_SPLAT	= $BFC0
 HEAP_LIM	= $BC00
 HUD_SCR		= $0200
 BMP_A		= $C000			; 4K, does not cross a 4K boundary
+; Menu writes the game display list here on exit. Above the three pages
+; LoadPrg saves at $C000, and below the bitmap clear that follows the copy.
+GAME_DL_STAGE	= $C300
+GAME_DL_N	= 146			; 14 head + LMS + 127 lines + JVB
+GAME_DL_JVB	= 144			; address word; byte 143 is the $41
 BMP_B		= $E000
 WPN_PTR0	= 0
 WPN_PTR_FLASH	= 0

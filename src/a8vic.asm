@@ -29,11 +29,11 @@ init_vic
 	sta $d01b				; PRIOR
 	lda #$00
 	sta $d01a				; COLBK
-	lda #$00
-	sta $d018				; COLPF2 HUD background
-	lda #$0e
+	lda #HUD_PF2_TOP			; orange hue, lum 0: title and map
+	sta $d018				; COLPF2
+	lda #HUD_PF1_TOP
 	sta $d017				; COLPF1 HUD luminance
-	jsr a8_build_dl
+	jsr a8_take_dl
 	lda #<dl_top
 	sta $d402
 	lda #>dl_top
@@ -63,88 +63,29 @@ dl_top	!byte $70				; 8
 	!error "dl_top crosses a 1K boundary"
 }
 
-a8_build_dl
-	lda #0
-	ldx mouse_en
-	beq .seam
-	lda #5					; top blank + 4 HUD-row DLIs, then the seam
-.seam
-	sta dli_seam
-	lda #<DL
-	sta dst_ptr
-	lda #>DL
-	sta dst_ptr+1
+; One shot. A level restart must not copy the bitmap over the list.
+dl_taken	!byte 0
+
+a8_take_dl
+	lda dl_taken
+	bne .td
+	lda #1
+	sta dl_taken
 	ldy #0
-	lda #$70				; 8 blank lines (16 with dl_top)
-	ldx mouse_en
-	beq .tb
-	lda #$f0				; + DLI: mouse sample ahead of the HUD
-.tb
-	jsr a8_dl_byte
-	lda #$42				; mode 2 + LMS
-	jsr a8_dl_byte
-	lda #<HUD_SCR
-	jsr a8_dl_byte
-	lda #>HUD_SCR
-	jsr a8_dl_byte
-	ldx #8
-.hud
-	ldy mouse_en
-	beq .hudp
-	txa
-	and #1					; DLI on every other row (X = 8,6,4,2). None
-	bne .hudp				; on the last row: it would still be running
-	lda #$82				; at the seam DLI
-	bne .hudw
-.hudp
-	lda #$02
-.hudw
-	ldy #0					; a8_dl_byte stores (dst_ptr),y
-	jsr a8_dl_byte
-	dex
-	bne .hud
-	lda #$80				; 1 blank + DLI (switch to narrow bitmap)
-	jsr a8_dl_byte
-	lda #$4e				; mode E + LMS
-	jsr a8_dl_byte
-	lda a8_show_lo
-	jsr a8_dl_byte
-	lda a8_show_hi
-	jsr a8_dl_byte
-	ldx #0
-.bmp
-	lda mouse_en
-	beq .bmpe
-	txa
-	and #15
-	cmp #15
-	bne .bmpe
-	lda #$8e				; every 16th bitmap line
-	bne .bmpw
-.bmpe
-	lda #$0e
-.bmpw
-	jsr a8_dl_byte
-	inx
-	cpx #127
-	bne .bmp
-	lda #$41				; JVB
-	jsr a8_dl_byte
+-	lda GAME_DL_STAGE,y
+	sta DL,y
+	iny
+	cpy #GAME_DL_N
+	bne -
 	lda #<dl_top
-	jsr a8_dl_byte
+	sta DL + GAME_DL_JVB
 	lda #>dl_top
-	jsr a8_dl_byte
+	sta DL + GAME_DL_JVB + 1
+.td
 	rts
 
-a8_dl_byte
-	sta (dst_ptr),y
-	inc dst_ptr
-	bne +
-	inc dst_ptr+1
-+
-	rts
-
-; LMS of the bitmap sits 1+3+8+1+1 = 14 bytes into the list.
+; Bitmap LMS address. Head is 14 bytes: top, title LMS, map, blank,
+; shells, nails, grenades, blank, message, seam, seam blank, mode E.
 DL_LMS		= DL + 14
 
 set_draw_ptrs

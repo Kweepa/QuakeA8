@@ -175,8 +175,8 @@ set STEP=buildreport
 python tools\buildreport.py
 if errorlevel 1 goto failed
 
-echo Built quake.atr
-dir quake.atr
+echo Built quakea8.atr
+dir quakea8.atr
 exit /b 0
 
 :failed_pop

@@ -140,7 +140,6 @@ draw_explosion
 +
 	sta inv_h
 	lda #0
-	sta inv_l
 	sta inv_k
 	jmp .de_root
 .de_inv

@@ -35,7 +35,7 @@ COL_PANEL_INK_A8 = 7			; mode 2 ink is PF1 luminance on the paper hue: lum C on 
 COL_TITLE_INK	= 11			; dark grey QUAKE letters in the bar
 HINT_KEY_COL	= 11			; dark grey key glyphs
 STORY_BG	= 0			; black around story panel
-STORY_BOX	= 15			; light grey story panel
+STORY_BOX	= 7			; yellow story panel
 STORY_TEXT	= 0			; black story text
 STORY_GREY_TOP	= BRAND_KEEP_ROWS + 1	; panel area starts one row below brand
 MARK_CARET	= $1e			; !scr "^" — toggle monospaced span, not drawn
@@ -781,7 +781,7 @@ show_text_screen
 	sta pr_setcol
 	jmp .sts_body
 
-; Read This! / endings: black surround, light-grey panel, black text. Restores COL_MAIN.
+; Read This! / endings: black surround, yellow panel, black text. Restores COL_MAIN.
 show_ending_pages
 	ldx #0
 .sep
@@ -804,7 +804,7 @@ show_story_screen
 	sta clear_bg
 
 
-	lda #1					; white panel
+	lda #STORY_BOX				; yellow panel
 	sta cell_bg
 	lda #0					; black text
 	sta ui_text_col
@@ -1010,7 +1010,7 @@ fill_top_bar
 	bcc .ftb_r
 	rts
 
-; Dark-grey QUAKE into the black bar (white highlights are sprites).
+; Dark-grey QUAKE on the black bar (white highlights baked into the bitmap).
 blit_menu_title
 
 	jmp a8_blit_title

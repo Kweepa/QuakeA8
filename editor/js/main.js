@@ -135,17 +135,17 @@ import {
 } from "./model.js";
 import { lookVectors, projectLine } from "./math3d.js";
 import {
-  autosaveDocJSON,
   DEFAULT_DOC_PATH,
   docFileName,
-  getStoredDocHandle,
+  getStoredProjectDir,
   hasDocFileHandle,
-  loadDocJSON,
+  loadProjectDoc,
   saveDocJSON,
   loadEditorSettings,
   saveEditorSettings,
-  tryRestoreDocFile,
-  allowStoredDocFile,
+  tryRestoreProjectDoc,
+  allowStoredProjectDir,
+  pickProjectDirectory,
   pickSharewareDirectory,
   tryRestoreSharewareDir,
   pickSoundBankDirectory,
@@ -812,13 +812,16 @@ function applyEditorState(ed) {
 
 async function saveNow(okMsg = "Saved") {
   if (saving) return;
+  if (!hasDocFileHandle()) {
+    showFileAccessGate(await getStoredProjectDir());
+    setStatus("Open the QuakeA8 folder to save editor/quake64.json", true);
+    return;
+  }
   saving = true;
   try {
     persistEditorSettings();
     const payload = gameDocument(doc);
-    const how = hasDocFileHandle()
-      ? await autosaveDocJSON(payload)
-      : await saveDocJSON(payload, DEFAULT_DOC_PATH);
+    const how = await saveDocJSON(payload);
     if (!how) {
       setStatus("Save cancelled", true);
       return;
@@ -4448,40 +4451,37 @@ function applyLoadedDoc(loaded) {
   setStatus(`Loaded ${docFileName()}`);
 }
 
-function showFileAccessGate(storedHandle) {
+function showFileAccessGate(storedDir) {
+  if (document.querySelector(".file-gate")) return;
   const overlay = document.createElement("div");
   overlay.className = "file-gate";
   overlay.innerHTML = `
     <div class="file-gate-card" role="dialog" aria-modal="true" aria-labelledby="file-gate-title">
-      <h2 id="file-gate-title">Open map file</h2>
+      <h2 id="file-gate-title">Open QuakeA8 folder</h2>
       <p class="muted">
         ${
-          storedHandle
-            ? `Browser needs permission to read/write <strong>${storedHandle.name}</strong>.`
-            : `Choose project file <strong>${DEFAULT_DOC_PATH}</strong> (usually in the editor folder).`
+          storedDir
+            ? `Browser needs permission to read and write <strong>${storedDir.name}</strong>. The map file is editor/${DEFAULT_DOC_PATH}.`
+            : `Choose the QuakeA8 folder (the one that contains <strong>build-a8.bat</strong>). The map file is editor/${DEFAULT_DOC_PATH}.`
         }
       </p>
       <div class="btn-row">
         <button type="button" class="file-gate-primary" id="file-gate-ok">
-          ${storedHandle ? `Allow ${storedHandle.name}` : `Open ${DEFAULT_DOC_PATH}…`}
+          ${storedDir ? `Allow ${storedDir.name}` : "Open QuakeA8 folder…"}
         </button>
-        ${storedHandle ? `<button type="button" id="file-gate-other">Choose different file…</button>` : ""}
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
   const ok = overlay.querySelector("#file-gate-ok");
-  const other = overlay.querySelector("#file-gate-other");
   ok.focus();
 
   const finish = async (loader) => {
     ok.disabled = true;
-    if (other) other.disabled = true;
     try {
       const loaded = await loader();
       if (!loaded) {
         ok.disabled = false;
-        if (other) other.disabled = false;
         setStatus("Open cancelled", true);
         return;
       }
@@ -4490,26 +4490,36 @@ function showFileAccessGate(storedHandle) {
       await restoreSharewareQuietly();
     } catch (err) {
       ok.disabled = false;
-      if (other) other.disabled = false;
       setStatus(String(err.message || err), true);
     }
   };
 
   ok.addEventListener("click", () => {
-    void finish(() =>
-      storedHandle ? allowStoredDocFile(storedHandle) : loadDocJSON()
-    );
-  });
-  other?.addEventListener("click", () => {
-    void finish(() => loadDocJSON());
+    void finish(async () => {
+      if (!storedDir) return pickProjectDirectory();
+      try {
+        return await allowStoredProjectDir(storedDir);
+      } catch (err) {
+        if (err?.name === "AbortError") return null;
+        const msg = String(err?.message || err);
+        const wrongFolder = msg.includes("build-a8.bat") || msg.includes("editor/quake64.json");
+        if (!wrongFolder) throw err;
+        const picked = await pickProjectDirectory();
+        if (picked) return picked;
+        throw err;
+      }
+    });
   });
 }
 
 document.getElementById("btn-load").addEventListener("click", async () => {
   try {
-    const loaded = await loadDocJSON();
-    if (!loaded) return;
-    applyLoadedDoc(loaded);
+    const loaded = await loadProjectDoc();
+    if (loaded) {
+      applyLoadedDoc(loaded);
+      return;
+    }
+    showFileAccessGate(await getStoredProjectDir());
   } catch (err) {
     setStatus(String(err.message || err), true);
   }
@@ -4734,14 +4744,14 @@ async function boot() {
   updateDirtyIndicator();
   refreshAll();
   try {
-    const loaded = await tryRestoreDocFile();
+    const loaded = await tryRestoreProjectDoc();
     if (loaded) {
       applyLoadedDoc(loaded);
       await restoreSharewareQuietly();
       await restoreSoundBanksQuietly();
       return;
     }
-    const stored = await getStoredDocHandle();
+    const stored = await getStoredProjectDir();
     if (restoreMdlRigBackup()) {
       markDirty();
       refreshAll();
@@ -4749,8 +4759,8 @@ async function boot() {
     showFileAccessGate(stored);
     setStatus(
       stored
-        ? `Click Allow to open ${stored.name}`
-        : `Open ${DEFAULT_DOC_PATH} to edit the project map`,
+        ? "Click Allow to open the QuakeA8 folder"
+        : "Open the QuakeA8 folder to edit the project map",
       false
     );
     await restoreSharewareQuietly();

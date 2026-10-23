@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 
-set "DISK=%~dp0quake.atr"
+set "DISK=%~dp0quakea8.atr"
 if not exist "%DISK%" (
   echo %DISK% missing — run build-a8.bat first
   exit /b 1

@@ -2,7 +2,7 @@
 
 PROFILE		    = 0				; 1 = R/P/K/D bucket HUD + VBI samples
 HUD_FRAME_MS	= 0				; 1 = frame time ms on HUD row 0
-HUD_POS		    = 0				; 1 = X/Y/Z/yaw/pitch on HUD row 2
+HUD_POS		    = 0				; 1 = X/Y/Z/yaw/pitch on HUD row 2 (blank line when off)
 INF_AMMO		= 0				; 1 = guns fire without spending ammo
 JUKEBOX		= 0				; 1 = Jukebox row in the menu (one tune; off for now)
 

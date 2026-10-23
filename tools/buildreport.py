@@ -29,7 +29,7 @@ def now() -> str:
 
 
 def atr_listing(path: Path) -> dict:
-    """Directory of quake.atr. `blocks` is the sector count the boot loader uses."""
+    """Directory of quakea8.atr. `blocks` is the sector count the boot loader uses."""
     if not path.is_file():
         raise SystemExit(f"missing: {path}")
     image = path.read_bytes()[16:]
@@ -153,7 +153,7 @@ def collect_success() -> dict:
         "time": now(),
         "variants": {"a8": collect_variant("game.lbl", symbols=True)},
         "banks": collect_banks(),
-        "disks": {"quake.atr": atr_listing(ATR_PATH)},
+        "disks": {"quakea8.atr": atr_listing(ATR_PATH)},
     }
 
 

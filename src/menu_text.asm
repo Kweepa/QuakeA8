@@ -62,7 +62,7 @@ credits3_text
 	!scr " ",0
 	!scr "Thanks y'all!",0
 	!scr " ",0
-	!scr "QuakeA8 v1.00.0, built 22 Oct 2026",0
+	!scr "QuakeA8 v1.00.0, built 23 Oct 2026",0
 	!byte 0
 
 credits_lo
