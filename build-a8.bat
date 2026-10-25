@@ -11,6 +11,12 @@ echo ACME not found. Set ACME in setup-env.bat
 goto failed
 
 :run
+python -c "import PIL" >nul 2>&1
+if errorlevel 1 (
+  echo Pillow missing. Run: python -m pip install pillow
+  set STEP=pillow
+  goto failed
+)
 set STEP=gen_smc_tags
 python tools\gen_smc_tags.py
 if errorlevel 1 goto failed

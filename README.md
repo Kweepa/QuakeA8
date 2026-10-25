@@ -36,7 +36,7 @@ SFX are PC-speaker envelopes on POKEY channels (player / enemy / world).
 
 ## Build
 
-6502 (ACME) plus Python table generators. Copy `setup-env.example.bat` to `setup-env.bat` and point `ACME` at your install.
+6502 (ACME) plus Python table generators. Copy `setup-env.example.bat` to `setup-env.bat` and point `ACME` at your install. Python 3 needs Pillow (`python -m pip install pillow`). The generators pack the UI font, muzzle, splat, and weapon PNGs. The editor does not use Pillow.
 
 ```bat
 build-a8.bat       :: generate listings, assemble PRGs, write quakea8.atr
